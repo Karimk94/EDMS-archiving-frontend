@@ -1,0 +1,74 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+  font-family: 'Cairo';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(../../public/fonts/cairo-v31-arabic_latin-regular.woff2) format('woff2');
+}
+
+@font-face {
+  font-family: 'Cairo';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url(../../public/fonts/cairo-v31-arabic_latin-regular.woff2) format('woff2');
+}
+
+@font-face {
+  font-family: 'Cairo';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url(../../public/fonts/cairo-v31-arabic_latin-regular.woff2) format('woff2');
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.status-active {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.status-inactive {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.status-disabled {
+  background-color: #f3f4f6;
+  color: #4b5563;
+}
+
+.status-expired {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.status-expiring-soon {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.status-valid {
+    background-color: #dcfce7;
+    color: #166534;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
