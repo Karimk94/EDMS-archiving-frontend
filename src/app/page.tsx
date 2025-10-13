@@ -15,6 +15,7 @@ type Legislation = { system_id: number; name: string; };
 type DocumentTypesResponse = { all_types: DocType[]; types_with_expiry: DocType[]; };
 type ExistingDocument = { system_id: number; docnumber: number; expiry: string | null; doc_type_id: number; legislation_ids: number[]; doc_name: string; legislation_names: string[] | null; };
 type NewDocument = { doc_type_id: string; doc_type_name: string; file: File | null; expiry: string; legislation_ids: string[]; };
+type User = { username: string; security_level: 'Editor' | 'Viewer'; };
 
 
 // --- Document Viewer Modal Component ---
@@ -188,7 +189,7 @@ const SearchableEmployeeSelect = ({ onEmployeeSelect, disabled }: { onEmployeeSe
     };
     return (
         <div className="relative">
-            <input type="text" placeholder="Search by Name or Employee ID to begin..." value={searchTerm} disabled={disabled} onChange={e => { setSearchTerm(e.target.value); setIsOpen(true); }} onFocus={() => setIsOpen(true)} onBlur={() => setTimeout(() => setIsOpen(false), 200)} className="mt-1 p-2 w-full border rounded-md disabled:bg-gray-100" />
+            <input type="text" placeholder="Search by Name or Employee ID to begin..." value={searchTerm} readOnly={disabled} onChange={e => { setSearchTerm(e.target.value); setIsOpen(true); }} onFocus={() => setIsOpen(true)} onBlur={() => setTimeout(() => setIsOpen(false), 200)} className="mt-1 p-2 w-full border rounded-md read-only:bg-gray-100 read-only:cursor-not-allowed" />
             {isOpen && !disabled && (
                 <ul ref={listRef} onScroll={handleScroll} className="absolute z-10 w-full bg-white border rounded-md mt-1 max-h-60 overflow-y-auto shadow-lg">
                     {employees.map(emp => (<li key={emp.system_id} onMouseDown={() => handleSelect(emp)} className="p-2 hover:bg-gray-100 cursor-pointer">{emp.fullname_ar} / {emp.fullname_en} ({emp.empno})</li>))}
@@ -203,7 +204,7 @@ const SearchableEmployeeSelect = ({ onEmployeeSelect, disabled }: { onEmployeeSe
 
 
 // --- Employee Form Component ---
-const EmployeeForm = ({ employeeToEditId, onBack, onFormSubmit }: { employeeToEditId?: number | null; onBack: () => void; onFormSubmit: () => void; }) => {
+const EmployeeForm = ({ employeeToEditId, onBack, onFormSubmit, user }: { employeeToEditId?: number | null; onBack: () => void; onFormSubmit: () => void; user: User | null; }) => {
     const [statuses, setStatuses] = useState<{ employee_status: Status[] }>({ employee_status: [] });
     const [docTypes, setDocTypes] = useState<DocumentTypesResponse>({ all_types: [], types_with_expiry: [] });
     const [legislations, setLegislations] = useState<Legislation[]>([]);
@@ -215,6 +216,8 @@ const EmployeeForm = ({ employeeToEditId, onBack, onFormSubmit }: { employeeToEd
     const [error, setError] = useState('');
     const [isFormLocked, setIsFormLocked] = useState(true);
     const [viewingDoc, setViewingDoc] = useState<{ url: string, name: string } | null>(null);
+
+    const isViewer = user?.security_level === 'Viewer';
 
     const expiryDocTypeIds = useMemo(() => new Set(docTypes.types_with_expiry.map(t => t.system_id)), [docTypes.types_with_expiry]);
 
@@ -325,6 +328,7 @@ const EmployeeForm = ({ employeeToEditId, onBack, onFormSubmit }: { employeeToEd
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (isViewer) return;
         setError('');
         if (!formData.employee_id) { setError('An employee must be selected.'); return; }
 
@@ -383,37 +387,41 @@ const EmployeeForm = ({ employeeToEditId, onBack, onFormSubmit }: { employeeToEd
         const newOnes = newDocuments.map(doc => parseInt(doc.doc_type_id, 10));
         return new Set([...existing, ...newOnes].filter(Boolean));
     }, [existingDocuments, newDocuments]);
+    
+    const inputClassName = "mt-1 p-2 w-full border rounded-md read-only:bg-gray-100 read-only:cursor-not-allowed";
+    const selectClassName = "mt-1 p-2 w-full border rounded-md disabled:bg-gray-100 disabled:cursor-not-allowed disabled:appearance-none";
+    const checkboxClassName = "rounded disabled:cursor-not-allowed";
 
     return (
         <>
             {viewingDoc && <DocumentViewerModal docUrl={viewingDoc.url} docName={viewingDoc.name} onClose={() => setViewingDoc(null)} />}
             <div className="bg-white p-6 rounded-lg shadow">
                 <div className="flex justify-between items-center mb-6 border-b pb-4">
-                    <h2 className="text-xl font-semibold">{employeeToEditId ? 'Edit Employee Archive' : 'Add New Employee Archive'}</h2>
+                    <h2 className="text-xl font-semibold">{employeeToEditId ? (isViewer ? 'View Employee Archive' : 'Edit Employee Archive') : 'Add New Employee Archive'}</h2>
                     <button onClick={onBack} className="text-gray-600 hover:text-gray-800">&larr; Back</button>
                 </div>
                 <form onSubmit={handleSubmit} className="space-y-8">
                     <div>
                         <h3 className="text-lg font-semibold mb-4 text-blue-700">First: Employee Data / أولاً: بيانات الموظف</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            <div className="lg:col-span-3"><label className="block text-sm font-medium">Select Employee / اختر الموظف</label>{employeeToEditId ? <input type="text" value={`${formData.name_en} (${formData.employeeNumber})`} className="mt-1 p-2 w-full border rounded-md bg-gray-100" readOnly /> : <SearchableEmployeeSelect onEmployeeSelect={handleEmployeeSelect} />}</div>
-                            <fieldset disabled={isFormLocked} className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 disabled:opacity-50">
-                                <div><label className="block text-sm">Name (EN) / الاسم (انجليزي):</label><input type="text" name="name_en" value={formData.name_en || ''} className="mt-1 p-2 w-full border rounded-md bg-gray-100" readOnly required /></div>
-                                <div><label className="block text-sm">Name (AR) / الاسم (عربي):</label><input type="text" name="name_ar" value={formData.name_ar || ''} className="mt-1 p-2 w-full border rounded-md bg-gray-100" readOnly /></div>
-                                <div><label className="block text-sm">Employee ID / الرقم الوظيفي:</label><input type="text" name="employeeNumber" value={formData.employeeNumber || ''} className="mt-1 p-2 w-full border rounded-md bg-gray-100" readOnly required /></div>
-                                <div><label className="block text-sm">Hire Date / تاريخ التعيين:</label><input type="date" name="hireDate" value={formData.hireDate || ''} onChange={handleInputChange} className="mt-1 p-2 w-full border rounded-md" /></div>
-                                <div><label className="block text-sm">Job Title / الوظيفة:</label><input type="text" name="jobTitle" value={formData.jobTitle || ''} onChange={handleInputChange} className="mt-1 p-2 w-full border rounded-md" /></div>
-                                <div><label className="block text-sm">Nationality / الجنسية:</label><input type="text" name="nationality" value={formData.nationality || ''} onChange={handleInputChange} className="mt-1 p-2 w-full border rounded-md" /></div>
-                                <div><label className="block text-sm">Email / البريد الالكتروني:</label><input type="email" name="email" value={formData.email || ''} onChange={handleInputChange} className="mt-1 p-2 w-full border rounded-md" /></div>
-                                <div><label className="block text-sm">Phone / الهاتف:</label><input type="tel" name="phone" value={formData.phone || ''} onChange={handleInputChange} className="mt-1 p-2 w-full border rounded-md" /></div>
-                                <div><label className="block text-sm">Manager / المسؤول المباشر:</label><input type="text" name="manager" value={formData.manager || ''} onChange={handleInputChange} className="mt-1 p-2 w-full border rounded-md" /></div>
-                                <div><label className="block text-sm">Department / الإدارة:</label><input type="text" name="department" value={formData.department || ''} onChange={handleInputChange} className="mt-1 p-2 w-full border rounded-md" /></div>
-                                <div><label className="block text-sm">Section / القسم:</label><input type="text" name="section" value={formData.section || ''} onChange={handleInputChange} className="mt-1 p-2 w-full border rounded-md" /></div>
-                                <div><label className="block text-sm">Employee Status / حالة الموظف:</label><select name="status_id" value={formData.status_id || ''} onChange={handleInputChange} className="mt-1 p-2 w-full border rounded-md" required><option value="">-- Select --</option>{statuses.employee_status.map(s => <option key={s.system_id} value={s.system_id}>{s.name_arabic} / {s.name_english}</option>)}</select></div>
+                            <div className="lg:col-span-3"><label className="block text-sm font-medium">Select Employee / اختر الموظف</label>{employeeToEditId ? <input type="text" value={`${formData.name_en} (${formData.employeeNumber})`} className="mt-1 p-2 w-full border rounded-md bg-gray-100" readOnly /> : <SearchableEmployeeSelect onEmployeeSelect={handleEmployeeSelect} disabled={isViewer} />}</div>
+                            <fieldset disabled={isFormLocked} className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                <div><label className="block text-sm">Name (EN) / الاسم (انجليزي):</label><input type="text" name="name_en" value={formData.name_en || ''} className={inputClassName} readOnly required /></div>
+                                <div><label className="block text-sm">Name (AR) / الاسم (عربي):</label><input type="text" name="name_ar" value={formData.name_ar || ''} className={inputClassName} readOnly /></div>
+                                <div><label className="block text-sm">Employee ID / الرقم الوظيفي:</label><input type="text" name="employeeNumber" value={formData.employeeNumber || ''} className={inputClassName} readOnly required /></div>
+                                <div><label className="block text-sm">Hire Date / تاريخ التعيين:</label><input type="date" name="hireDate" value={formData.hireDate || ''} onChange={handleInputChange} readOnly={isViewer} className={inputClassName} /></div>
+                                <div><label className="block text-sm">Job Title / الوظيفة:</label><input type="text" name="jobTitle" value={formData.jobTitle || ''} onChange={handleInputChange} readOnly={isViewer} className={inputClassName} /></div>
+                                <div><label className="block text-sm">Nationality / الجنسية:</label><input type="text" name="nationality" value={formData.nationality || ''} onChange={handleInputChange} readOnly={isViewer} className={inputClassName} /></div>
+                                <div><label className="block text-sm">Email / البريد الالكتروني:</label><input type="email" name="email" value={formData.email || ''} onChange={handleInputChange} readOnly={isViewer} className={inputClassName} /></div>
+                                <div><label className="block text-sm">Phone / الهاتف:</label><input type="tel" name="phone" value={formData.phone || ''} onChange={handleInputChange} readOnly={isViewer} className={inputClassName} /></div>
+                                <div><label className="block text-sm">Manager / المسؤول المباشر:</label><input type="text" name="manager" value={formData.manager || ''} onChange={handleInputChange} readOnly={isViewer} className={inputClassName} /></div>
+                                <div><label className="block text-sm">Department / الإدارة:</label><input type="text" name="department" value={formData.department || ''} onChange={handleInputChange} readOnly={isViewer} className={inputClassName} /></div>
+                                <div><label className="block text-sm">Section / القسم:</label><input type="text" name="section" value={formData.section || ''} onChange={handleInputChange} readOnly={isViewer} className={inputClassName} /></div>
+                                <div><label className="block text-sm">Employee Status / حالة الموظف:</label><select name="status_id" value={formData.status_id || ''} onChange={handleInputChange} disabled={isViewer} className={selectClassName} required><option value="">-- Select --</option>{statuses.employee_status.map(s => <option key={s.system_id} value={s.system_id}>{s.name_arabic} / {s.name_english}</option>)}</select></div>
                             </fieldset>
                         </div>
                     </div>
-                    <fieldset disabled={isFormLocked} className="disabled:opacity-50">
+                    <fieldset disabled={isFormLocked}>
                         <div>
                             <h3 className="text-lg font-semibold mb-4 text-blue-700">Second: Documents / ثانياً: المستندات</h3>
                             {employeeToEditId && existingDocuments.length > 0 && ( 
@@ -434,9 +442,11 @@ const EmployeeForm = ({ employeeToEditId, onBack, onFormSubmit }: { employeeToEd
                                                         <button type="button" title="View Document" onClick={() => setViewingDoc({ url: `api/document/${doc.docnumber}`, name: doc.doc_name })} className="text-gray-500 hover:text-gray-800">
                                                             <img src="/eye-icon.svg" alt="View" className="h-5 w-5" />
                                                         </button>
-                                                        <button type="button" title="Remove Document" onClick={() => handleDeleteExistingDoc(doc.system_id)} className="text-red-500/75 hover:text-red-700">
-                                                            <img src="/trash-icon.svg" alt="Remove" className="h-5 w-5" />
-                                                        </button> 
+                                                        {!isViewer && (
+                                                            <button type="button" title="Remove Document" onClick={() => handleDeleteExistingDoc(doc.system_id)} className="text-red-500/75 hover:text-red-700">
+                                                                <img src="/trash-icon.svg" alt="Remove" className="h-5 w-5" />
+                                                            </button> 
+                                                        )}
                                                     </div> 
                                                 </div> 
                                                 {isWarrantDecision && (
@@ -449,7 +459,8 @@ const EmployeeForm = ({ employeeToEditId, onBack, onFormSubmit }: { employeeToEd
                                                                         type="checkbox"
                                                                         checked={doc.legislation_ids.includes(leg.system_id)}
                                                                         onChange={() => handleExistingDocLegislationChange(doc.system_id, leg.system_id)}
-                                                                        className="rounded"
+                                                                        className={checkboxClassName}
+                                                                        disabled={isViewer}
                                                                     />
                                                                     <span className="text-sm">{leg.name}</span>
                                                                 </label>
@@ -462,6 +473,7 @@ const EmployeeForm = ({ employeeToEditId, onBack, onFormSubmit }: { employeeToEd
                                     })} 
                                 </div> 
                             )}
+                            {!isViewer && (
                             <div className="space-y-4">
                                 {newDocuments.map((doc, index) => {
                                     const showExpiry = expiryDocTypeIds.has(parseInt(doc.doc_type_id, 10));
@@ -521,11 +533,16 @@ const EmployeeForm = ({ employeeToEditId, onBack, onFormSubmit }: { employeeToEd
                                     );
                                 })}
                             </div>
-                            <div className="mt-4"><button type="button" onClick={addNewDocumentRow} className="bg-green-500 text-white font-bold py-2 px-4 rounded-md hover:bg-green-600">+ Add New Document / إضافة مستند جديد</button></div>
+                            )}
+                            {!isViewer && (
+                                <div className="mt-4"><button type="button" onClick={addNewDocumentRow} className="bg-green-500 text-white font-bold py-2 px-4 rounded-md hover:bg-green-600">+ Add New Document / إضافة مستند جديد</button></div>
+                            )}
                         </div>
                     </fieldset>
                     {error && <div className="text-sm text-red-700 p-3 bg-red-100 rounded-md">{error}</div>}
+                    {!isViewer && (
                     <div className="flex justify-end pt-4"><button type="submit" className="bg-blue-600 text-white font-bold py-2 px-6 rounded-md" disabled={isSubmitting || isFormLocked}>{isSubmitting ? 'Saving...' : 'Save Data / حفظ البيانات'}</button></div>
+                    )}
                 </form>
             </div>
         </>
@@ -535,7 +552,7 @@ const EmployeeForm = ({ employeeToEditId, onBack, onFormSubmit }: { employeeToEd
 // --- Main Page Component ---
 export default function DashboardPage() {
     const [view, setView] = useState<'dashboard' | 'form'>('dashboard');
-    const [user, setUser] = useState<string | null>(null);
+    const [user, setUser] = useState<User | null>(null);
     const [editingEmployeeId, setEditingEmployeeId] = useState<number | null>(null);
     const router = useRouter();
     const [dataRefreshKey, setDataRefreshKey] = useState(0);
@@ -543,7 +560,7 @@ export default function DashboardPage() {
     useEffect(() => {
         fetch('api/auth/user')
             .then(res => res.ok ? res.json() : Promise.reject())
-            .then(data => data.user?.username ? setUser(data.user.username) : router.push('/login'))
+            .then(data => data.user?.username ? setUser(data.user) : router.push('/login'))
             .catch(() => router.push('/login'));
     }, [router]);
 
@@ -574,16 +591,16 @@ export default function DashboardPage() {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
                     <h1 className="text-2xl font-bold text-gray-900">نظام أرشفة الموظفين / Employee Archiving System</h1>
                     <div className="flex items-center gap-4">
-                        <div className="text-sm">مرحباً / Welcome, <span className="font-semibold">{user}</span></div>
+                        <div className="text-sm">مرحباً / Welcome, <span className="font-semibold">{user.username} {user.security_level}</span></div>
                         <button onClick={handleLogout} className="bg-red-500 text-white text-xs font-bold py-1 px-3 rounded-md hover:bg-red-600">تسجيل الخروج</button>
                     </div>
                 </div>
             </header>
             <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 {view === 'dashboard' ? (
-                    <DashboardView onAddNew={() => setView('form')} onEdit={handleEdit} dataRefreshKey={dataRefreshKey} />
+                    <DashboardView user={user} onAddNew={() => setView('form')} onEdit={handleEdit} dataRefreshKey={dataRefreshKey} />
                 ) : (
-                    <EmployeeForm onBack={handleBackFromForm} onFormSubmit={handleFormSubmit} employeeToEditId={editingEmployeeId} />
+                    <EmployeeForm user={user} onBack={handleBackFromForm} onFormSubmit={handleFormSubmit} employeeToEditId={editingEmployeeId} />
                 )}
             </main>
         </div>
@@ -591,7 +608,7 @@ export default function DashboardPage() {
 }
 
 // --- Dashboard View Component ---
-const DashboardView = ({ onAddNew, onEdit, dataRefreshKey }: { onAddNew: () => void; onEdit: (emp: ArchivedEmployee) => void; dataRefreshKey: number; }) => {
+const DashboardView = ({ onAddNew, onEdit, dataRefreshKey, user }: { onAddNew: () => void; onEdit: (emp: ArchivedEmployee) => void; dataRefreshKey: number; user: User | null; }) => {
     const [employees, setEmployees] = useState<ArchivedEmployee[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [dashboardCounts, setDashboardCounts] = useState({
@@ -603,6 +620,8 @@ const DashboardView = ({ onAddNew, onEdit, dataRefreshKey }: { onAddNew: () => v
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<string | null>(null);
     const [filterType, setFilterType] = useState<string | null>(null);
+
+    const isViewer = user?.security_level === 'Viewer';
 
     const getCardStatusBadgeClass = (statusClass: string) => {
         switch (statusClass) {
@@ -656,9 +675,11 @@ const DashboardView = ({ onAddNew, onEdit, dataRefreshKey }: { onAddNew: () => v
         <div className="bg-white p-6 rounded-lg shadow">
             <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
                 <h2 className="text-xl font-bold">لوحة المعلومات / Dashboard</h2>
-                <button onClick={onAddNew} className="w-full md:w-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-md hover:bg-blue-700">
-                    + إضافة موظف جديد / Add New Employee
-                </button>
+                {!isViewer && (
+                    <button onClick={onAddNew} className="w-full md:w-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-md hover:bg-blue-700">
+                        + إضافة موظف جديد / Add New Employee
+                    </button>
+                )}
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
                 <div onClick={() => { setStatusFilter(null); setFilterType(null); }} className="bg-blue-50 p-4 rounded-lg text-center border cursor-pointer">
@@ -713,7 +734,11 @@ const DashboardView = ({ onAddNew, onEdit, dataRefreshKey }: { onAddNew: () => v
                                         )}
                                         {emp.card_expiry === 'N/A' && emp.card_expiry}
                                     </td>
-                                    <td className="p-3 text-sm text-right"><button onClick={() => onEdit(emp)} className="text-blue-500 hover:underline">تعديل / Edit</button></td>
+                                    <td className="p-3 text-sm text-right">
+                                        <button onClick={() => onEdit(emp)} className="text-blue-500 hover:underline">
+                                            {isViewer ? 'View' : 'Edit'} / {isViewer ? 'عرض' : 'تعديل'}
+                                        </button>
+                                    </td>
                                 </tr>
                             ))
                         ) : (
