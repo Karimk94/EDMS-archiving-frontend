@@ -182,12 +182,90 @@ const SearchableEmployeeSelect = ({ onEmployeeSelect, disabled }: { onEmployeeSe
     );
 };
 
+// --- Searchable Nationality Dropdown ---
+const SearchableNationalitySelect = ({ value, onChange, disabled, nationalities }: { value: string; onChange: (value: string) => void; disabled?: boolean; nationalities: string[] }) => {
+    const [searchTerm, setSearchTerm] = useState(value || '');
+    const [isOpen, setIsOpen] = useState(false);
+    const wrapperRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        setSearchTerm(value);
+    }, [value]);
+
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
+                setIsOpen(false);
+                setSearchTerm(value); 
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, [wrapperRef, value]);
+
+    const filteredNationalities = useMemo(() =>
+        nationalities.filter(nat =>
+            nat.toLowerCase().includes(searchTerm.toLowerCase())
+        ), [searchTerm, nationalities]
+    );
+
+    const isCurrentValueInList = useMemo(() =>
+        nationalities.some(nat => nat.toLowerCase() === value.toLowerCase()),
+        [value, nationalities]
+    );
+
+    const handleSelect = (nationality: string) => {
+        setSearchTerm(nationality);
+        onChange(nationality);
+        setIsOpen(false);
+    };
+
+    return (
+        <div className="relative" ref={wrapperRef}>
+            <div className="relative">
+                 <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={e => {
+                        setSearchTerm(e.target.value);
+                        setIsOpen(true);
+                    }}
+                    onFocus={() => setIsOpen(true)}
+                    disabled={disabled}
+                    className="mt-1 p-2 w-full border rounded-md disabled:bg-gray-100 disabled:cursor-not-allowed"
+                />
+                {!isCurrentValueInList && value && (
+                    <span className="absolute end-2 top-1/2 -translate-y-1/2 text-yellow-500" title={`Nationality "${value}" is not in the predefined list.`}>
+                        ⚠️
+                    </span>
+                )}
+            </div>
+            {isOpen && !disabled && (
+                <ul className="absolute z-20 w-full bg-white border rounded-md mt-1 max-h-60 overflow-y-auto shadow-lg">
+                    {filteredNationalities.length > 0 ? (
+                        filteredNationalities.map(nat => (
+                            <li key={nat} onMouseDown={() => handleSelect(nat)} className="p-2 hover:bg-gray-100 cursor-pointer">
+                                {nat}
+                            </li>
+                        ))
+                    ) : (
+                        <li className="p-2 text-center text-gray-500">No results found</li>
+                    )}
+                </ul>
+            )}
+        </div>
+    );
+};
+
 
 // --- Employee Form Component ---
 const EmployeeForm = ({ employeeToEditId, onBack, onFormSubmit, user }: { employeeToEditId?: number | null; onBack: () => void; onFormSubmit: () => void; user: User | null; }) => {
     const [statuses, setStatuses] = useState<{ employee_status: Status[] }>({ employee_status: [] });
     const [docTypes, setDocTypes] = useState<DocumentTypesResponse>({ all_types: [], types_with_expiry: [] });
     const [legislations, setLegislations] = useState<Legislation[]>([]);
+    const [nationalities, setNationalities] = useState<string[]>([]);
     const [formData, setFormData] = useState({ employee_id: '', name_en: '', name_ar: '', employeeNumber: '', hireDate: '', jobTitle: '', nationality: '', email: '', phone: '', manager: '', department: '', section: '', status_id: '' });
     const [existingDocuments, setExistingDocuments] = useState<ExistingDocument[]>([]);
     const [newDocuments, setNewDocuments] = useState<NewDocument[]>([]);
@@ -203,13 +281,14 @@ const EmployeeForm = ({ employeeToEditId, onBack, onFormSubmit, user }: { employ
     const warrantDecisionDocTypeId = useMemo(() => docTypes.all_types.find(dt => dt.name.includes('Warrant Decisions') || dt.name.includes('القرارات الخاصة بالضبطية'))?.system_id, [docTypes]);
 
     useEffect(() => {
-        fetch(`${basePath}/api/statuses`).then(res => res.json()).then(setStatuses); // Add basePath
-        fetch(`${basePath}/api/document_types`).then(res => res.json()).then(setDocTypes); // Add basePath
-        fetch(`${basePath}/api/legislations`).then(res => res.json()).then(setLegislations); // Add basePath
+        fetch(`${basePath}/api/statuses`).then(res => res.json()).then(setStatuses);
+        fetch(`${basePath}/api/document_types`).then(res => res.json()).then(setDocTypes);
+        fetch(`${basePath}/api/legislations`).then(res => res.json()).then(setLegislations);
+        fetch(`${basePath}/nationalities.json`).then(res => res.json()).then(setNationalities);
 
         if (employeeToEditId) {
             setIsFormLocked(false);
-            fetch(`${basePath}/api/employees/${employeeToEditId}`) // Add basePath
+            fetch(`${basePath}/api/employees/${employeeToEditId}`)
                 .then(res => res.json())
                 .then(details => {
                     const formattedHireDate = details.hire_date ? new Date(details.hire_date).toISOString().split('T')[0] : '';
@@ -228,6 +307,8 @@ const EmployeeForm = ({ employeeToEditId, onBack, onFormSubmit, user }: { employ
     };
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    const handleNationalityChange = (value: string) => setFormData(prev => ({ ...prev, nationality: value }));
+
     const addNewDocumentRow = () => setNewDocuments(prev => [...prev, { doc_type_id: '', doc_type_name: '', file: null, expiry: '', legislation_ids: [] }]);
     
     const handleNewDocumentChange = (index: number, field: keyof NewDocument, value: any) => {
@@ -303,7 +384,29 @@ const EmployeeForm = ({ employeeToEditId, onBack, onFormSubmit, user }: { employ
         setIsSubmitting(false);
     };
 
-    const usedDocTypeIds = useMemo(() => new Set([...existingDocuments.map(doc => doc.doc_type_id), ...newDocuments.map(doc => parseInt(doc.doc_type_id, 10))].filter(Boolean)), [existingDocuments, newDocuments]);
+    const usedDocTypeIds = useMemo(() => {
+        const otherDocTypeName = 'other'; // Define the name for "Other" type
+        const allNewDocTypes = newDocuments.map(doc => doc.doc_type_name).filter(Boolean);
+        const usedNonOtherTypes = new Set<number>();
+    
+        // Add existing doc types
+        existingDocuments.forEach(doc => {
+            if (!doc.doc_name.toLowerCase().includes(otherDocTypeName)) {
+                usedNonOtherTypes.add(doc.doc_type_id);
+            }
+        });
+    
+        // Add new doc types
+        newDocuments.forEach(doc => {
+            const docTypeId = parseInt(doc.doc_type_id, 10);
+            if (docTypeId && !doc.doc_type_name.toLowerCase().includes(otherDocTypeName)) {
+                usedNonOtherTypes.add(docTypeId);
+            }
+        });
+    
+        return usedNonOtherTypes;
+    }, [existingDocuments, newDocuments]);
+    
     const inputClassName = "mt-1 p-2 w-full border rounded-md read-only:bg-gray-100 read-only:cursor-not-allowed";
     const selectClassName = "mt-1 p-2 w-full border rounded-md disabled:bg-gray-100 disabled:cursor-not-allowed disabled:appearance-none";
     const checkboxClassName = "rounded disabled:cursor-not-allowed";
@@ -318,31 +421,39 @@ const EmployeeForm = ({ employeeToEditId, onBack, onFormSubmit, user }: { employ
                 </div>
                 <form onSubmit={handleSubmit} className="space-y-8">
                     <div>
-                        <h3 className="text-lg font-semibold mb-4 text-blue-700">First: Employee Data / أولاً: بيانات الموظف</h3>
+                        <h3 className="text-lg font-semibold mb-4 text-blue-700">أولاً: بيانات الموظف / First: Employee Data</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            <div className="lg:col-span-3"><label className="block text-sm font-medium">Select Employee / اختر الموظف</label>{employeeToEditId ? <input type="text" value={`${formData.name_en} (${formData.employeeNumber})`} className="mt-1 p-2 w-full border rounded-md bg-gray-100" readOnly /> : <SearchableEmployeeSelect onEmployeeSelect={handleEmployeeSelect} disabled={isViewer} />}</div>
+                            <div className="lg:col-span-3"><label className="block text-sm font-medium">اختر الموظف / Select Employee</label>{employeeToEditId ? <input type="text" value={`${formData.name_en} (${formData.employeeNumber})`} className="mt-1 p-2 w-full border rounded-md bg-gray-100" readOnly /> : <SearchableEmployeeSelect onEmployeeSelect={handleEmployeeSelect} disabled={isViewer} />}</div>
                             <fieldset disabled={isFormLocked} className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                <div><label className="block text-sm">Name (EN) / الاسم (انجليزي):</label><input type="text" name="name_en" value={formData.name_en || ''} className={inputClassName} readOnly required /></div>
-                                <div><label className="block text-sm">Name (AR) / الاسم (عربي):</label><input type="text" name="name_ar" value={formData.name_ar || ''} className={inputClassName} readOnly /></div>
-                                <div><label className="block text-sm">Employee ID / الرقم الوظيفي:</label><input type="text" name="employeeNumber" value={formData.employeeNumber || ''} className={inputClassName} readOnly required /></div>
-                                <div><label className="block text-sm">Hire Date / تاريخ التعيين:</label><input type="date" name="hireDate" value={formData.hireDate || ''} onChange={handleInputChange} readOnly={isViewer} className={inputClassName} /></div>
-                                <div><label className="block text-sm">Job Title / الوظيفة:</label><input type="text" name="jobTitle" value={formData.jobTitle || ''} onChange={handleInputChange} readOnly={isViewer} className={inputClassName} /></div>
-                                <div><label className="block text-sm">Nationality / الجنسية:</label><input type="text" name="nationality" value={formData.nationality || ''} onChange={handleInputChange} readOnly={isViewer} className={inputClassName} /></div>
-                                <div><label className="block text-sm">Email / البريد الالكتروني:</label><input type="email" name="email" value={formData.email || ''} onChange={handleInputChange} readOnly={isViewer} className={inputClassName} /></div>
-                                <div><label className="block text-sm">Phone / الهاتف:</label><input type="tel" name="phone" value={formData.phone || ''} onChange={handleInputChange} readOnly={isViewer} className={inputClassName} /></div>
-                                <div><label className="block text-sm">Manager / المسؤول المباشر:</label><input type="text" name="manager" value={formData.manager || ''} onChange={handleInputChange} readOnly={isViewer} className={inputClassName} /></div>
-                                <div><label className="block text-sm">Department / الإدارة:</label><input type="text" name="department" value={formData.department || ''} onChange={handleInputChange} readOnly={isViewer} className={inputClassName} /></div>
-                                <div><label className="block text-sm">Section / القسم:</label><input type="text" name="section" value={formData.section || ''} onChange={handleInputChange} readOnly={isViewer} className={inputClassName} /></div>
-                                <div><label className="block text-sm">Employee Status / حالة الموظف:</label><select name="status_id" value={formData.status_id || ''} onChange={handleInputChange} disabled={isViewer} className={selectClassName} required><option value="">-- Select --</option>{statuses.employee_status.map(s => <option key={s.system_id} value={s.system_id}>{s.name_arabic} / {s.name_english}</option>)}</select></div>
+                                <div><label className="block text-sm">الاسم (انجليزي) / Name (EN):</label><input type="text" name="name_en" value={formData.name_en || ''} className={inputClassName} readOnly required /></div>
+                                <div><label className="block text-sm">الاسم (عربي) / Name (AR):</label><input type="text" name="name_ar" value={formData.name_ar || ''} className={inputClassName} readOnly /></div>
+                                <div><label className="block text-sm">الرقم الوظيفي / Employee ID:</label><input type="text" name="employeeNumber" value={formData.employeeNumber || ''} className={inputClassName} readOnly required /></div>
+                                <div><label className="block text-sm">تاريخ التعيين / Hire Date:</label><input type="date" name="hireDate" value={formData.hireDate || ''} onChange={handleInputChange} readOnly={isViewer} className={inputClassName} /></div>
+                                <div><label className="block text-sm">الوظيفة / Job Title:</label><input type="text" name="jobTitle" value={formData.jobTitle || ''} onChange={handleInputChange} readOnly={isViewer} className={inputClassName} /></div>
+                                <div>
+                                    <label className="block text-sm">الجنسية / Nationality:</label>
+                                    <SearchableNationalitySelect 
+                                        value={formData.nationality || ''} 
+                                        onChange={handleNationalityChange} 
+                                        disabled={isViewer || isFormLocked}
+                                        nationalities={nationalities}
+                                    />
+                                </div>
+                                <div><label className="block text-sm">البريد الالكتروني / Email:</label><input type="email" name="email" value={formData.email || ''} onChange={handleInputChange} readOnly={isViewer} className={inputClassName} /></div>
+                                <div><label className="block text-sm">الهاتف / Phone:</label><input type="tel" name="phone" value={formData.phone || ''} onChange={handleInputChange} readOnly={isViewer} className={inputClassName} /></div>
+                                <div><label className="block text-sm">المسؤول المباشر / Manager:</label><input type="text" name="manager" value={formData.manager || ''} onChange={handleInputChange} readOnly={isViewer} className={inputClassName} /></div>
+                                <div><label className="block text-sm">الإدارة / Department:</label><input type="text" name="department" value={formData.department || ''} onChange={handleInputChange} readOnly={isViewer} className={inputClassName} /></div>
+                                <div><label className="block text-sm">القسم / Section:</label><input type="text" name="section" value={formData.section || ''} onChange={handleInputChange} readOnly={isViewer} className={inputClassName} /></div>
+                                <div><label className="block text-sm">حالة الموظف / Employee Status:</label><select name="status_id" value={formData.status_id || ''} onChange={handleInputChange} disabled={isViewer} className={selectClassName} required><option value="">-- Select --</option>{statuses.employee_status.map(s => <option key={s.system_id} value={s.system_id}>{s.name_arabic} / {s.name_english}</option>)}</select></div>
                             </fieldset>
                         </div>
                     </div>
                     <fieldset disabled={isFormLocked}>
                         <div>
-                            <h3 className="text-lg font-semibold mb-4 text-blue-700">Second: Documents / ثانياً: المستندات</h3>
+                            <h3 className="text-lg font-semibold mb-4 text-blue-700">ثانياً: المستندات / Second: Documents</h3>
                             {employeeToEditId && existingDocuments.length > 0 && ( 
                                 <div className="space-y-2 mb-4"> 
-                                    <h4 className="text-sm font-semibold">Existing Documents / المستندات الحالية:</h4> 
+                                    <h4 className="text-sm font-semibold">المستندات الحالية / Existing Documents:</h4> 
                                     {existingDocuments.map(doc => {
                                         const isWarrantDecision = warrantDecisionDocTypeId && doc.doc_type_id === warrantDecisionDocTypeId;
                                         return (
@@ -350,14 +461,14 @@ const EmployeeForm = ({ employeeToEditId, onBack, onFormSubmit, user }: { employ
                                                 <div className="flex justify-between items-center"> 
                                                     <span className="font-semibold">{doc.doc_name}</span> 
                                                     <div className="flex items-center gap-4"> 
-                                                        {doc.expiry && (<span className="text-xs text-gray-600 bg-gray-200 px-2 py-1 rounded">expires / تنتهي: {doc.expiry}</span>)}
+                                                        {doc.expiry && (<span className="text-xs text-gray-600 bg-gray-200 px-2 py-1 rounded">تنتهي / expires: {doc.expiry}</span>)}
                                                         <button type="button" title="View Document" onClick={() => setViewingDoc({ url: `${doc.docnumber}`, name: doc.doc_name })} className="text-gray-500 hover:text-gray-800"><img src={`${basePath}/eye-icon.svg`} alt="View" className="h-5 w-5" /></button>
                                                         {!isViewer && (<button type="button" title="Remove Document" onClick={() => handleDeleteExistingDoc(doc.system_id)} className="text-red-500/75 hover:text-red-700"><img src={`${basePath}/trash-icon.svg`} alt="Remove" className="h-5 w-5" /></button> )}
                                                     </div> 
                                                 </div> 
                                                 {isWarrantDecision && (
                                                     <div className="mt-2">
-                                                        <label className="text-xs font-semibold text-gray-700">Related Legislation / التشريع المرتبط</label>
+                                                        <label className="text-xs font-semibold text-gray-700">التشريع المرتبط / Related Legislation</label>
                                                         <div className="mt-1 p-2 border rounded-md bg-white max-h-32 overflow-y-auto space-y-1">
                                                             {legislations.map(leg => (
                                                                 <label key={leg.system_id} className="flex items-center space-x-2 rtl:space-x-reverse cursor-pointer">
@@ -382,13 +493,30 @@ const EmployeeForm = ({ employeeToEditId, onBack, onFormSubmit, user }: { employ
                                         <div key={index} className="flex items-start justify-between p-3 border rounded-md bg-gray-50 space-x-4 rtl:space-x-reverse">
                                             <div className="flex-grow space-y-3">
                                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
-                                                    <div><label className="text-xs">Document Type / نوع المستند</label><select value={doc.doc_type_id} onChange={e => handleNewDocumentChange(index, 'doc_type_id', e.target.value)} className="p-2 w-full border rounded-md" required><option value="">-- Select / اختر --</option>{docTypes.all_types.map(type => <option key={type.system_id} value={type.system_id} disabled={usedDocTypeIds.has(type.system_id)}>{type.name}</option>)}</select></div>
-                                                    <div><label className="text-xs">File / الملف</label><input id={`new-file-input-${index}`} type="file" onChange={e => handleNewDocumentChange(index, 'file', e.target.files ? e.target.files[0] : null)} className="p-1 w-full border rounded-md text-sm bg-white" accept="image/jpeg,image/png,application/pdf" required /></div>
-                                                    <div>{showExpiry && (<><label className="text-xs">Expiry Date / تاريخ الانتهاء</label><input type="date" value={doc.expiry} onChange={e => handleNewDocumentChange(index, 'expiry', e.target.value)} className="p-2 w-full border rounded-md" required /></>)}</div>
+                                                    <div>
+                                                        <label className="text-xs">نوع المستند / Document Type</label>
+                                                        <select value={doc.doc_type_id} onChange={e => handleNewDocumentChange(index, 'doc_type_id', e.target.value)} className="p-2 w-full border rounded-md" required>
+                                                            <option value="">-- اختر / Select --</option>
+                                                            {docTypes.all_types.map(type => 
+                                                                <option 
+                                                                    key={type.system_id} 
+                                                                    value={type.system_id} 
+                                                                    disabled={
+                                                                        usedDocTypeIds.has(type.system_id) && 
+                                                                        type.system_id.toString() !== doc.doc_type_id
+                                                                    }
+                                                                >
+                                                                    {type.name}
+                                                                </option>
+                                                            )}
+                                                        </select>
+                                                    </div>
+                                                    <div><label className="text-xs">الملف / File</label><input id={`new-file-input-${index}`} type="file" onChange={e => handleNewDocumentChange(index, 'file', e.target.files ? e.target.files[0] : null)} className="p-1 w-full border rounded-md text-sm bg-white" accept="image/jpeg,image/png,application/pdf" required /></div>
+                                                    <div>{showExpiry && (<><label className="text-xs">تاريخ الانتهاء / Expiry Date</label><input type="date" value={doc.expiry} onChange={e => handleNewDocumentChange(index, 'expiry', e.target.value)} className="p-2 w-full border rounded-md" required /></>)}</div>
                                                 </div>
                                                 {isWarrantDecision && (
                                                     <div className="mt-2">
-                                                        <label className="text-xs font-semibold text-gray-700">Related Legislation / التشريع المرتبط</label>
+                                                        <label className="text-xs font-semibold text-gray-700">التشريع المرتبط / Related Legislation</label>
                                                         <div className="mt-1 p-2 border rounded-md bg-white max-h-32 overflow-y-auto space-y-1">
                                                         {legislations.map(leg => (<label key={leg.system_id} className="flex items-center space-x-2 rtl:space-x-reverse cursor-pointer"><input type="checkbox" checked={doc.legislation_ids.includes(leg.system_id.toString())} onChange={() => handleNewDocumentChange(index, 'legislation_ids', leg.system_id.toString())} className="rounded"/><span className="text-sm">{leg.name}</span></label>))}
                                                         </div>
@@ -401,11 +529,11 @@ const EmployeeForm = ({ employeeToEditId, onBack, onFormSubmit, user }: { employ
                                 })}
                             </div>
                             )}
-                            {!isViewer && (<div className="mt-4"><button type="button" onClick={addNewDocumentRow} className="bg-green-500 text-white font-bold py-2 px-4 rounded-md hover:bg-green-600">+ Add New Document / إضافة مستند جديد</button></div>)}
+                            {!isViewer && (<div className="mt-4"><button type="button" onClick={addNewDocumentRow} className="bg-green-500 text-white font-bold py-2 px-4 rounded-md hover:bg-green-600 disabled:bg-green-300 disabled:cursor-not-allowed" disabled={isFormLocked}>+ إضافة مستند جديد / Add New Document</button></div>)}
                         </div>
                     </fieldset>
                     {error && <div className="text-sm text-red-700 p-3 bg-red-100 rounded-md">{error}</div>}
-                    {!isViewer && (<div className="flex justify-end pt-4"><button type="submit" className="bg-blue-600 text-white font-bold py-2 px-6 rounded-md" disabled={isSubmitting || isFormLocked}>{isSubmitting ? 'Saving...' : 'Save Data / حفظ البيانات'}</button></div>)}
+                    {!isViewer && (<div className="flex justify-end pt-4"><button type="submit" className="bg-blue-600 text-white font-bold py-2 px-6 rounded-md hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed" disabled={isSubmitting || isFormLocked}>{isSubmitting ? 'Saving...' : 'حفظ البيانات / Save Data'}</button></div>)}
                 </form>
             </div>
         </>
@@ -432,20 +560,30 @@ export default function DashboardPage() {
     const handleEdit = (employee: ArchivedEmployee) => { if (employee.system_id) { setEditingEmployeeId(employee.system_id); setView('form'); } };
     const handleBackFromForm = () => { setEditingEmployeeId(null); setView('dashboard'); };
 
+    const securityLevelClasses = useMemo(() => {
+        if (!user) return '';
+        return user.security_level === 'Editor'
+            ? 'bg-blue-100 text-blue-800'
+            : 'bg-gray-200 text-gray-800';
+    }, [user]);
+
     if (!user) return <div className="flex items-center justify-center min-h-screen">Verifying session...</div>;
 
     return (
         <div className="min-h-screen bg-gray-50 text-gray-800">
             <header className="bg-white shadow-sm sticky top-0 z-10">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+                <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
                     <h1 className="text-2xl font-bold text-gray-900">نظام أرشفة الموظفين / Employee Archiving System</h1>
                     <div className="flex items-center gap-4">
-                        <div className="text-sm">مرحباً / Welcome, <span className="font-semibold">{user.username} {user.security_level}</span></div>
-                        <button onClick={handleLogout} className="bg-red-500 text-white text-xs font-bold py-1 px-3 rounded-md hover:bg-red-600">تسجيل الخروج</button>
+                        <div className="text-sm flex items-center gap-2">
+                           <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${securityLevelClasses}`}>{user.security_level}</span>
+                           <span className="font-semibold">{user.username}</span>
+                        </div>
+                        <button onClick={handleLogout} className="bg-red-500 text-white text-xs font-bold py-1 px-3 rounded-md hover:bg-red-600">تسجيل الخروج / Logout</button>
                     </div>
                 </div>
             </header>
-            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <main className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 {view === 'dashboard' ? (<DashboardView user={user} onAddNew={() => setView('form')} onEdit={handleEdit} dataRefreshKey={dataRefreshKey} />) : (<EmployeeForm user={user} onBack={handleBackFromForm} onFormSubmit={handleFormSubmit} employeeToEditId={editingEmployeeId} />)}
             </main>
         </div>
@@ -460,6 +598,7 @@ const DashboardView = ({ onAddNew, onEdit, dataRefreshKey, user }: { onAddNew: (
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<string | null>(null);
     const [filterType, setFilterType] = useState<string | null>(null);
+    const [activeCard, setActiveCard] = useState<string | null>('total');
 
     const isViewer = user?.security_level === 'Viewer';
     const getCardStatusBadgeClass = (statusClass: string) => ({ expired: 'status-badge status-expired', 'expiring-soon': 'status-badge status-expiring-soon', valid: 'status-badge status-valid' }[statusClass] || '');
@@ -481,6 +620,15 @@ const DashboardView = ({ onAddNew, onEdit, dataRefreshKey, user }: { onAddNew: (
             .catch(() => setIsLoading(false));
     }, [dataRefreshKey, searchTerm, statusFilter, filterType]);
 
+    const handleCardClick = (type: string | null, status: string | null, cardName: string) => {
+        setFilterType(type);
+        setStatusFilter(status);
+        setActiveCard(cardName);
+    }
+
+    const cardBaseClasses = "p-4 rounded-lg text-center border cursor-pointer hover:bg-opacity-80 transition";
+    const activeCardClasses = "ring-2 ring-blue-500 ring-offset-2";
+
     return (
         <div className="bg-white p-6 rounded-lg shadow">
             <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
@@ -488,23 +636,53 @@ const DashboardView = ({ onAddNew, onEdit, dataRefreshKey, user }: { onAddNew: (
                 {!isViewer && (<button onClick={onAddNew} className="w-full md:w-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-md hover:bg-blue-700">+ إضافة موظف جديد / Add New Employee</button>)}
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                <div onClick={() => { setStatusFilter(null); setFilterType(null); }} className="bg-blue-50 p-4 rounded-lg text-center border cursor-pointer"><p className="text-sm font-semibold text-blue-800">إجمالي الموظفين / Total Employees</p><h3 className="text-3xl font-bold text-blue-900 mt-2">{dashboardCounts.total_employees}</h3></div>
-                <div onClick={() => { setStatusFilter('Active'); setFilterType(null); }} className="bg-green-50 p-4 rounded-lg text-center border cursor-pointer"><p className="text-sm font-semibold text-green-800">الموظفين الفعالين / Active Employees</p><h3 className="text-3xl font-bold text-green-900 mt-2">{dashboardCounts.active_employees}</h3></div>
-                <div onClick={() => { setStatusFilter(null); setFilterType('judicial_warrant'); }} className="bg-indigo-50 p-4 rounded-lg text-center border cursor-pointer"><p className="text-sm font-semibold text-indigo-800">مأموري الضبط / Judicial Warrants</p><h3 className="text-3xl font-bold text-indigo-900 mt-2">{dashboardCounts.judicial_warrants}</h3></div>
-                <div onClick={() => { setStatusFilter(null); setFilterType('expiring_soon'); }} className="bg-yellow-50 p-4 rounded-lg text-center border cursor-pointer"><p className="text-sm font-semibold text-yellow-800">مستندات ستنتهي قريباً / Expiring Soon</p><h3 className="text-3xl font-bold text-yellow-900 mt-2">{dashboardCounts.expiring_soon}</h3></div>
+                <div onClick={() => handleCardClick(null, null, 'total')} className={`${cardBaseClasses} bg-blue-50 hover:bg-blue-100 ${activeCard === 'total' ? activeCardClasses : ''}`}>
+                    <p className="text-sm font-semibold text-blue-800">إجمالي الموظفين / Total Employees</p>
+                    <h3 className="text-3xl font-bold text-blue-900 mt-2">{dashboardCounts.total_employees}</h3>
+                </div>
+                <div onClick={() => handleCardClick(null, 'Active', 'active')} className={`${cardBaseClasses} bg-green-50 hover:bg-green-100 ${activeCard === 'active' ? activeCardClasses : ''}`}>
+                    <p className="text-sm font-semibold text-green-800">الموظفين الفعالين / Active Employees</p>
+                    <h3 className="text-3xl font-bold text-green-900 mt-2">{dashboardCounts.active_employees}</h3>
+                </div>
+                <div onClick={() => handleCardClick('judicial_warrant', null, 'warrant')} className={`${cardBaseClasses} bg-indigo-50 hover:bg-indigo-100 ${activeCard === 'warrant' ? activeCardClasses : ''}`}>
+                    <p className="text-sm font-semibold text-indigo-800">مأموري الضبط / Judicial Warrants</p>
+                    <h3 className="text-3xl font-bold text-indigo-900 mt-2">{dashboardCounts.judicial_warrants}</h3>
+                </div>
+                <div onClick={() => handleCardClick('expiring_soon', null, 'expiring')} className={`${cardBaseClasses} bg-yellow-50 hover:bg-yellow-100 ${activeCard === 'expiring' ? activeCardClasses : ''}`}>
+                    <p className="text-sm font-semibold text-yellow-800">مستندات ستنتهي قريباً / Expiring Soon</p>
+                    <h3 className="text-3xl font-bold text-yellow-900 mt-2">{dashboardCounts.expiring_soon}</h3>
+                </div>
             </div>
             <div className="mb-6"><input type="text" placeholder="ابحث بالاسم، الرقم الوظيفي... / Search by Name, Employee No..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full p-2 border rounded-md" /></div>
-            <div className="overflow-x-auto no-scrollbar">
-                <table className="w-full table-auto">
-                    <thead className="bg-gray-100 border-b">
+            <div className="overflow-x-auto">
+                <table className="w-full table-fixed border-collapse">
+                    <thead className="bg-gray-100 border-b-2 border-gray-200">
                         <tr>
-                            <th className="p-3 font-bold text-sm text-right">م / #</th><th className="p-3 font-bold text-sm text-right">الرقم الوظيفي / Emp. ID</th><th className="p-3 font-bold text-sm text-right">الاسم / Name</th><th className="p-3 font-bold text-sm text-right">الإدارة/القسم / Dept./Section</th><th className="p-3 font-bold text-sm text-right">حالة الموظف / Status</th><th className="p-3 font-bold text-sm text-right">حالة الضبطية / Warrant Status</th><th className="p-3 font-bold text-sm text-right">حالة البطاقة / Card Status</th><th className="p-3 font-bold text-sm text-right">انتهاء البطاقة / Card Expiry</th><th className="p-3 font-bold text-sm text-right">إجراءات / Actions</th>
+                            <th className="p-3 w-16 font-bold text-sm text-right">م / #</th>
+                            <th className="p-3 w-40 font-bold text-sm text-right">الرقم الوظيفي / Emp. ID</th>
+                            <th className="p-3 font-bold text-sm text-right">الاسم / Name</th>
+                            <th className="p-3 font-bold text-sm text-right">الإدارة/القسم / Dept./Section</th>
+                            <th className="p-3 w-40 font-bold text-sm text-right">حالة الموظف / Status</th>
+                            <th className="p-3 w-48 font-bold text-sm text-right">حالة الضبطية / Warrant Status</th>
+                            <th className="p-3 w-48 font-bold text-sm text-right">حالة البطاقة / Card Status</th>
+                            <th className="p-3 w-48 font-bold text-sm text-right">انتهاء البطاقة / Card Expiry</th>
+                            <th className="p-3 w-40 font-bold text-sm text-right">إجراءات / Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         {isLoading ? (<tr><td colSpan={9} className="text-center p-10">Loading...</td></tr>) : employees.length > 0 ? (employees.map((emp, index) => (
                             <tr key={emp.system_id} className="border-b hover:bg-gray-50">
-                                <td className="p-3 text-sm text-right">{index + 1}</td><td className="p-3 text-sm text-right">{emp.empno}</td><td className="p-3 text-sm font-semibold text-blue-600 text-right">{emp.fullname_en}</td><td className="p-3 text-sm text-right">{emp.department} / {emp.section || 'N/A'}</td><td className="p-3 text-sm text-right"><span className={getStatusBadgeClass(emp.status_en)}>{emp.status_ar || 'N/A'}</span></td><td className="p-3 text-sm text-right">{emp.warrant_status}</td><td className="p-3 text-sm text-right">{emp.card_status}</td><td className="p-3 text-sm text-right">{emp.card_expiry !== 'N/A' && (<span className={getCardStatusBadgeClass(emp.card_status_class)}>{emp.card_expiry}</span>)}{emp.card_expiry === 'N/A' && emp.card_expiry}</td><td className="p-3 text-sm text-right"><button onClick={() => onEdit(emp)} className="text-blue-500 hover:underline">{isViewer ? 'View' : 'Edit'} / {isViewer ? 'عرض' : 'تعديل'}</button></td>
+                                <td className="p-3 text-sm text-right">{index + 1}</td>
+                                <td className="p-3 text-sm text-right whitespace-nowrap">{emp.empno}</td>
+                                <td className="p-3 text-sm font-semibold text-blue-600 text-right">{emp.fullname_en}</td>
+                                <td className="p-3 text-sm text-right">{emp.department} / {emp.section || 'N/A'}</td>
+                                <td className="p-3 text-sm text-right"><span className={getStatusBadgeClass(emp.status_en)}>{emp.status_ar || 'N/A'}</span></td>
+                                <td className="p-3 text-sm text-right whitespace-nowrap">{emp.warrant_status}</td>
+                                <td className="p-3 text-sm text-right whitespace-nowrap">{emp.card_status}</td>
+                                <td className="p-3 text-sm text-right whitespace-nowrap">{emp.card_expiry !== 'N/A' && (<span className={getCardStatusBadgeClass(emp.card_status_class)}>{emp.card_expiry}</span>)}{emp.card_expiry === 'N/A' && emp.card_expiry}</td>
+                                <td className="p-3 text-sm text-right">
+                                    <button onClick={() => onEdit(emp)} className="text-blue-500 hover:underline">{isViewer ? 'عرض / View' : 'تعديل / Edit'}</button>
+                                </td>
                             </tr>
                         ))) : (<tr><td colSpan={9} className="text-center p-10 text-gray-500">No employees have been archived yet.</td></tr>)}
                     </tbody>
