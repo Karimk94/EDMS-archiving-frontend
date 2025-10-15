@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
     const router = useRouter();
+    const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
     const [error, setError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
 
@@ -14,7 +15,7 @@ export default function LoginPage() {
         setError(null);
         const data = Object.fromEntries(new FormData(event.currentTarget).entries());
 
-        const apiPath = 'api/auth/login';
+        const apiPath = `${basePath}/api/auth/login`;
 
         console.log(`[LOGIN PAGE] Attempting to fetch: ${apiPath}`);
         
@@ -26,7 +27,7 @@ export default function LoginPage() {
             });
 
             if (response.ok) {
-                router.push('/');
+                router.push('/'); 
             } else {
                 const errData = await response.json();
                 const errorMessage = `Login failed: ${errData.error || response.statusText}`;

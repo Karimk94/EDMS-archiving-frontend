@@ -2,16 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const BACKEND_URL = process.env.BACKEND_URL;
 
-async function proxyHandler(req: NextRequest): Promise<NextResponse> {
-  const path = req.nextUrl.pathname;
+async function proxyHandler(req: NextRequest, { params }: { params: { proxy: string[] } }): Promise<NextResponse> {
+  const apiPath = `/api/${params.proxy.join('/')}`;
 
   if (!BACKEND_URL) {
     return NextResponse.json({ error: 'Backend API URL is not configured on the server.' }, { status: 500 });
   }
 
-  const targetUrl = `${BACKEND_URL}${path}${req.nextUrl.search}`;
+  const targetUrl = `${BACKEND_URL}${apiPath}${req.nextUrl.search}`;
+  console.log(`[API PROXY] Forwarding request to: ${targetUrl}`);
 
-  // Forward all headers from the original request, including the cookie
   const headers = new Headers(req.headers);
 
   try {
@@ -29,23 +29,21 @@ async function proxyHandler(req: NextRequest): Promise<NextResponse> {
       headers: response.headers,
     });
   } catch (error) {
-    console.error('API proxy error:', error);
+    console.error('[API PROXY] Error forwarding request:', error);
     return NextResponse.json({ error: 'Error forwarding request to the backend.' }, { status: 502 });
   }
 }
 
-export async function GET(req: NextRequest) {
-  return proxyHandler(req);
+// Ensure all exported methods pass the `params` object to the handler.
+export async function GET(req: NextRequest, { params }: { params: { proxy: string[] } }) {
+  return proxyHandler(req, { params });
 }
-
-export async function POST(req: NextRequest) {
-  return proxyHandler(req);
+export async function POST(req: NextRequest, { params }: { params: { proxy: string[] } }) {
+  return proxyHandler(req, { params });
 }
-
-export async function PUT(req: NextRequest) {
-    return proxyHandler(req);
+export async function PUT(req: NextRequest, { params }: { params: { proxy: string[] } }) {
+    return proxyHandler(req, { params });
 }
-
-export async function DELETE(req: NextRequest) {
-    return proxyHandler(req);
+export async function DELETE(req: NextRequest, { params }: { params: { proxy: string[] } }) {
+    return proxyHandler(req, { params });
 }
