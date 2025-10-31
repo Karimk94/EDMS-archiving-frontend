@@ -1,6 +1,6 @@
 'use client'; 
 
-import { useState, FormEvent } from 'react';
+import { useState, FormEvent, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
@@ -8,6 +8,21 @@ export default function LoginPage() {
     const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
     const [error, setError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
+    const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+
+    useEffect(() => {
+        fetch(`${basePath}/api/auth/pta-user`)
+            .then(res => {
+                if (res.ok) {
+                    router.push('/');
+                } else {
+                    setIsCheckingAuth(false);
+                }
+            })
+            .catch(() => {
+                setIsCheckingAuth(false);
+            });
+    }, [router, basePath]);
 
     const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -15,7 +30,7 @@ export default function LoginPage() {
         setError(null);
         const data = Object.fromEntries(new FormData(event.currentTarget).entries());
 
-        const apiPath = `${basePath}/api/auth/login`;
+        const apiPath = `${basePath}/api/auth/pta-login`;
 
         console.log(`[LOGIN PAGE] Attempting to fetch: ${apiPath}`);
         
@@ -43,10 +58,14 @@ export default function LoginPage() {
         }
     };
 
+    if (isCheckingAuth) {
+        return <div className="flex items-center justify-center min-h-screen">Checking authentication...</div>;
+    }
+
     return (
         <div dir="rtl" className="flex items-center justify-center min-h-screen bg-gray-50 text-gray-800 font-sans">
             <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-lg">
-                <h1 className="text-3xl font-bold text-center text-gray-900">نظام أرشفة الموظفين Employee Archiving System</h1>
+                <h1 className="text-3xl font-bold text-center text-gray-900">نظام متابعة الضبطية القضائية Judicial control monitoring system</h1>
                 <p className="text-center text-gray-600">
                     الرجاء تسجيل الدخول باستخدام بيانات DMS الخاصة بك
                     <br />

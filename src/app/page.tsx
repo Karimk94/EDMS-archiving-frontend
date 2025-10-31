@@ -8,7 +8,7 @@ type ArchivedEmployee = { system_id: number | null; fullname_en: string; empno: 
 type ApiEmployeeResponse = { employees: ArchivedEmployee[]; total_employees: number; };
 type HrEmployee = { system_id: number; fullname_en: string; fullname_ar: string; empno: string; };
 type ApiHrResponse = { employees: HrEmployee[]; hasMore: boolean; };
-type HrEmployeeDetails = { [key: string]: any };
+type HrEmployeeDetails = { [key:string]: any };
 type Status = { system_id: number; name_english: string; name_arabic: string; };
 type DocType = { system_id: number; name: string; };
 type Legislation = { system_id: number; name: string; };
@@ -297,6 +297,34 @@ const EmployeeForm = ({ employeeToEditId, onBack, onFormSubmit, user }: { employ
                 });
         }
     }, [employeeToEditId]);
+    
+    useEffect(() => {
+        if (isFormLocked || !warrantDecisionDocTypeId || statuses.employee_status.length === 0) return;
+    
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+    
+        const allWarrantDocs = [
+            ...existingDocuments.filter(doc => doc.doc_type_id === 3),
+            ...newDocuments.filter(doc => doc.doc_type_id === '3')
+        ];
+    
+        const hasValidWarrant = allWarrantDocs.some(doc => {
+            const expiryDate = doc.expiry ? new Date(doc.expiry) : null;
+            return expiryDate && expiryDate >= today;
+        });
+    
+        const activeStatus = statuses.employee_status.find(s => s.name_english === 'Active');
+        const inactiveStatus = statuses.employee_status.find(s => s.name_english === 'Inactive');
+    
+        if (hasValidWarrant && activeStatus) {
+            setFormData(prev => ({ ...prev, status_id: activeStatus.system_id.toString() }));
+        } else if (inactiveStatus) {
+            setFormData(prev => ({ ...prev, status_id: inactiveStatus.system_id.toString() }));
+        }
+    
+    }, [existingDocuments, newDocuments, warrantDecisionDocTypeId, statuses, isFormLocked]);
+    
 
     const handleEmployeeSelect = async (employeeId: string) => {
         if (!employeeId) { setIsFormLocked(true); return; }
@@ -444,7 +472,7 @@ const EmployeeForm = ({ employeeToEditId, onBack, onFormSubmit, user }: { employ
                                 <div><label className="block text-sm">المسؤول المباشر / Manager:</label><input type="text" name="manager" value={formData.manager || ''} onChange={handleInputChange} readOnly={isViewer} className={inputClassName} /></div>
                                 <div><label className="block text-sm">الإدارة / Department:</label><input type="text" name="department" value={formData.department || ''} onChange={handleInputChange} readOnly={isViewer} className={inputClassName} /></div>
                                 <div><label className="block text-sm">القسم / Section:</label><input type="text" name="section" value={formData.section || ''} onChange={handleInputChange} readOnly={isViewer} className={inputClassName} /></div>
-                                <div><label className="block text-sm">حالة الموظف / Employee Status:</label><select name="status_id" value={formData.status_id || ''} onChange={handleInputChange} disabled={isViewer} className={selectClassName} required><option value="">-- Select --</option>{statuses.employee_status.map(s => <option key={s.system_id} value={s.system_id}>{s.name_arabic} / {s.name_english}</option>)}</select></div>
+                                <div><label className="block text-sm">حالة الموظف / Employee Status:</label><select name="status_id" value={formData.status_id || ''} onChange={handleInputChange} disabled={true} className={selectClassName} required><option value="">-- Select --</option>{statuses.employee_status.map(s => <option key={s.system_id} value={s.system_id}>{s.name_arabic} / {s.name_english}</option>)}</select></div>
                             </fieldset>
                         </div>
                     </div>
@@ -573,7 +601,7 @@ export default function DashboardPage() {
         <div className="min-h-screen bg-gray-50 text-gray-800">
             <header className="bg-white shadow-sm sticky top-0 z-10">
                 <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-                    <h1 className="text-2xl font-bold text-gray-900">نظام أرشفة الموظفين / Employee Archiving System</h1>
+                    <h1 className="text-2xl font-bold text-gray-900">نظام متابعة الضبطية القضائية / Judicial control monitoring system</h1>
                     <div className="flex items-center gap-4">
                         <div className="text-sm flex items-center gap-2">
                            <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${securityLevelClasses}`}>{user.security_level}</span>
@@ -594,7 +622,7 @@ export default function DashboardPage() {
 const DashboardView = ({ onAddNew, onEdit, dataRefreshKey, user }: { onAddNew: () => void; onEdit: (emp: ArchivedEmployee) => void; dataRefreshKey: number; user: User | null; }) => {
     const [employees, setEmployees] = useState<ArchivedEmployee[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [dashboardCounts, setDashboardCounts] = useState({ total_employees: 0, active_employees: 0, judicial_warrants: 0, expiring_soon: 0 });
+    const [dashboardCounts, setDashboardCounts] = useState({ total_employees: 0, active_employees: 0, inactive_employees: 0, expiring_soon: 0 });
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<string | null>(null);
     const [filterType, setFilterType] = useState<string | null>(null);
@@ -640,16 +668,16 @@ const DashboardView = ({ onAddNew, onEdit, dataRefreshKey, user }: { onAddNew: (
                     <p className="text-sm font-semibold text-blue-800">إجمالي الموظفين / Total Employees</p>
                     <h3 className="text-3xl font-bold text-blue-900 mt-2">{dashboardCounts.total_employees}</h3>
                 </div>
-                <div onClick={() => handleCardClick(null, 'Active', 'active')} className={`${cardBaseClasses} bg-green-50 hover:bg-green-100 ${activeCard === 'active' ? activeCardClasses : ''}`}>
+                <div onClick={() => handleCardClick('has_warrant', 'Active', 'active')} className={`${cardBaseClasses} bg-green-50 hover:bg-green-100 ${activeCard === 'active' ? activeCardClasses : ''}`}>
                     <p className="text-sm font-semibold text-green-800">الموظفين الفعالين / Active Employees</p>
                     <h3 className="text-3xl font-bold text-green-900 mt-2">{dashboardCounts.active_employees}</h3>
                 </div>
-                <div onClick={() => handleCardClick('judicial_warrant', null, 'warrant')} className={`${cardBaseClasses} bg-indigo-50 hover:bg-indigo-100 ${activeCard === 'warrant' ? activeCardClasses : ''}`}>
-                    <p className="text-sm font-semibold text-indigo-800">مأموري الضبط / Judicial Warrants</p>
-                    <h3 className="text-3xl font-bold text-indigo-900 mt-2">{dashboardCounts.judicial_warrants}</h3>
+                <div onClick={() => handleCardClick('no_warrant', 'Inactive', 'inactive')} className={`${cardBaseClasses} bg-red-50 hover:bg-red-100 ${activeCard === 'inactive' ? activeCardClasses : ''}`}>
+                    <p className="text-sm font-semibold text-red-800">الموظفين غير الفعالين / Inactive Users</p>
+                    <h3 className="text-3xl font-bold text-red-900 mt-2">{dashboardCounts.inactive_employees}</h3>
                 </div>
-                <div onClick={() => handleCardClick('expiring_soon', null, 'expiring')} className={`${cardBaseClasses} bg-yellow-50 hover:bg-yellow-100 ${activeCard === 'expiring' ? activeCardClasses : ''}`}>
-                    <p className="text-sm font-semibold text-yellow-800">مستندات ستنتهي قريباً / Expiring Soon</p>
+                <div onClick={() => handleCardClick('expiring_soon_or_expired', null, 'expiring')} className={`${cardBaseClasses} bg-yellow-50 hover:bg-yellow-100 ${activeCard === 'expiring' ? activeCardClasses : ''}`}>
+                    <p className="text-sm font-semibold text-yellow-800">مستندات ستنتهي قريبًا أو منتهية الصلاحية / Expiring Soon or Expired</p>
                     <h3 className="text-3xl font-bold text-yellow-900 mt-2">{dashboardCounts.expiring_soon}</h3>
                 </div>
             </div>
