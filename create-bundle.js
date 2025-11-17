@@ -45,6 +45,7 @@ const files_and_folders_to_bundle = [
     'node_modules',
     '.next',
     'public',
+    'src',
     'package.json',
     'package-lock.json',
     'next.config.js',

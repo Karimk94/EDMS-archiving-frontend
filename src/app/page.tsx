@@ -8,7 +8,7 @@ type ArchivedEmployee = { system_id: number | null; fullname_en: string; empno: 
 type ApiEmployeeResponse = { employees: ArchivedEmployee[]; total_employees: number; };
 type HrEmployee = { system_id: number; fullname_en: string; fullname_ar: string; empno: string; };
 type ApiHrResponse = { employees: HrEmployee[]; hasMore: boolean; };
-type HrEmployeeDetails = { [key:string]: any };
+type HrEmployeeDetails = { [key: string]: any };
 type Status = { system_id: number; name_english: string; name_arabic: string; };
 type DocType = { system_id: number; name: string; };
 type Legislation = { system_id: number; name: string; };
@@ -37,7 +37,7 @@ const DocumentViewerModal = ({ docUrl, docName, onClose }: { docUrl: string; doc
             .then(res => {
                 if (!res.ok) throw new Error('Failed to fetch document');
                 const contentType = res.headers.get('Content-Type') || '';
-                
+
                 if (contentType.startsWith('image/')) {
                     setIsImage(true);
                     return res.blob();
@@ -91,23 +91,23 @@ const DocumentViewerModal = ({ docUrl, docName, onClose }: { docUrl: string; doc
     return (
         <div className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4 sm:p-6 md:p-8">
             <div ref={modalContentRef} className="bg-white rounded-lg shadow-2xl w-full max-w-5xl h-[95vh] flex flex-col">
-            <div className="flex justify-between items-center p-2 border-b bg-gray-50 rounded-t-lg">
-                <div className="flex items-center gap-2">
-                {isImage && !isLoading && (
-                    <>
-                    <button onClick={() => handleZoom(-0.2)} className="px-3 py-1 text-lg font-bold border rounded bg-white hover:bg-gray-100 disabled:opacity-50" disabled={scale <= 0.2}>-</button>
-                    <button onClick={() => handleZoom(0.2)} className="px-3 py-1 text-lg font-bold border rounded bg-white hover:bg-gray-100">+</button>
-                    <button onClick={() => setScale(1)} className="px-3 py-1 text-sm border rounded bg-white hover:bg-gray-100">Reset Zoom</button>
-                    <a href={contentUrl} download={docName || 'image.jpg'} className="px-3 py-1 text-sm border rounded bg-blue-500 text-white hover:bg-blue-600 no-underline">Download</a>
-                    </>
-                )}
+                <div className="flex justify-between items-center p-2 border-b bg-gray-50 rounded-t-lg">
+                    <div className="flex items-center gap-2">
+                        {isImage && !isLoading && (
+                            <>
+                                <button onClick={() => handleZoom(-0.2)} className="px-3 py-1 text-lg font-bold border rounded bg-white hover:bg-gray-100 disabled:opacity-50" disabled={scale <= 0.2}>-</button>
+                                <button onClick={() => handleZoom(0.2)} className="px-3 py-1 text-lg font-bold border rounded bg-white hover:bg-gray-100">+</button>
+                                <button onClick={() => setScale(1)} className="px-3 py-1 text-sm border rounded bg-white hover:bg-gray-100">Reset Zoom</button>
+                                <a href={contentUrl} download={docName || 'image.jpg'} className="px-3 py-1 text-sm border rounded bg-blue-500 text-white hover:bg-blue-600 no-underline">Download</a>
+                            </>
+                        )}
+                    </div>
+                    <button onClick={onClose} className="text-gray-500 hover:text-gray-800 text-3xl font-bold leading-none">&times;</button>
                 </div>
-                <button onClick={onClose} className="text-gray-500 hover:text-gray-800 text-3xl font-bold leading-none">&times;</button>
-            </div>
-            <div className="flex-grow p-2 relative bg-gray-200 overflow-hidden">
-                {isLoading && <div className="absolute inset-0 flex items-center justify-center bg-white z-20"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div></div>}
-                {!isLoading && contentUrl && ( isImage ? <div className="w-full h-full overflow-auto flex items-center justify-center"><img src={contentUrl} alt={docName || "Document Content"} className="w-full h-full object-contain" style={{ transform: `scale(${scale})`, transition: 'transform 0.1s ease-in-out', transformOrigin: 'center' }}/></div> : <iframe src={contentUrl} className="w-full h-full border-0" title="Document Viewer"/> )}
-            </div>
+                <div className="flex-grow p-2 relative bg-gray-200 overflow-hidden">
+                    {isLoading && <div className="absolute inset-0 flex items-center justify-center bg-white z-20"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div></div>}
+                    {!isLoading && contentUrl && (isImage ? <div className="w-full h-full overflow-auto flex items-center justify-center"><img src={contentUrl} alt={docName || "Document Content"} className="w-full h-full object-contain" style={{ transform: `scale(${scale})`, transition: 'transform 0.1s ease-in-out', transformOrigin: 'center' }} /></div> : <iframe src={contentUrl} className="w-full h-full border-0" title="Document Viewer" />)}
+                </div>
             </div>
         </div>
     );
@@ -124,6 +124,7 @@ const SearchableEmployeeSelect = ({ onEmployeeSelect, disabled }: { onEmployeeSe
     const listRef = useRef<HTMLUListElement>(null);
     const fetchController = useRef<AbortController | null>(null);
     const loadingStatusRef = useRef({ isLoading, hasMore });
+
     loadingStatusRef.current = { isLoading, hasMore };
 
     const fetchEmployees = useCallback((currentSearch: string, currentPage: number, isNewSearch = false) => {
@@ -132,7 +133,7 @@ const SearchableEmployeeSelect = ({ onEmployeeSelect, disabled }: { onEmployeeSe
         fetchController.current = new AbortController();
         const signal = fetchController.current.signal;
         setIsLoading(true);
-        fetch(`${basePath}/api/hr_employees?search=${encodeURIComponent(currentSearch)}&page=${currentPage}`, { signal }) // Add basePath
+        fetch(`${basePath}/api/hr_employees?search=${encodeURIComponent(currentSearch)}&page=${currentPage}`, { signal })
             .then(res => res.json())
             .then((data: ApiHrResponse) => {
                 setEmployees(prev => isNewSearch ? data.employees : [...prev, ...data.employees]);
@@ -196,7 +197,7 @@ const SearchableNationalitySelect = ({ value, onChange, disabled, nationalities 
         function handleClickOutside(event: MouseEvent) {
             if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
                 setIsOpen(false);
-                setSearchTerm(value); 
+                setSearchTerm(value);
             }
         }
         document.addEventListener("mousedown", handleClickOutside);
@@ -225,7 +226,7 @@ const SearchableNationalitySelect = ({ value, onChange, disabled, nationalities 
     return (
         <div className="relative" ref={wrapperRef}>
             <div className="relative">
-                 <input
+                <input
                     type="text"
                     value={searchTerm}
                     onChange={e => {
@@ -259,6 +260,160 @@ const SearchableNationalitySelect = ({ value, onChange, disabled, nationalities 
     );
 };
 
+const BulkAddModal = ({ onClose, onUploadSuccess }: { onClose: () => void; onUploadSuccess: () => void; }) => {
+    const [file, setFile] = useState<File | null>(null);
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [uploadResult, setUploadResult] = useState<{ message: string; errors?: string[] } | null>(null);
+    const modalContentRef = useRef<HTMLDivElement>(null);
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            const selectedFile = e.target.files[0];
+            if (selectedFile.name.endsWith('.xlsx') || selectedFile.name.endsWith('.csv')) {
+                setFile(selectedFile);
+                setError(null);
+                setUploadResult(null);
+            } else {
+                setError('Invalid file type. Please upload a .xlsx or .csv file.');
+                setFile(null);
+            }
+        }
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!file) {
+            setError('Please select a file to upload.');
+            return;
+        }
+
+        setIsLoading(true);
+        setError(null);
+        setUploadResult(null);
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const response = await fetch(`${basePath}/api/employees/bulk-upload`, {
+                method: 'POST',
+                body: formData,
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                setUploadResult({ message: result.message || 'Upload successful!' });
+                setFile(null);
+                // Automatically close and refresh after 2 seconds on full success
+                setTimeout(() => {
+                    onUploadSuccess();
+                    onClose();
+                }, 2000);
+            } else {
+                // Handle partial success (422) or failure
+                const errorMessage = result.error || 'An unknown error occurred.';
+                setError(errorMessage);
+                if (result.errors) {
+                    setUploadResult({ message: result.message || 'Upload completed with errors:', errors: result.errors });
+                } else {
+                    setUploadResult({ message: 'Upload Failed:', errors: [errorMessage] });
+                }
+            }
+        } catch (err) {
+            console.error('Bulk upload fetch error:', err);
+            setError('An error occurred while communicating with the server.');
+            setUploadResult({ message: 'Upload Failed:', errors: ['Network error or server unavailable.'] });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // Close on Escape key
+    useEffect(() => {
+        const handleKeyDown = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose(); };
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [onClose]);
+
+    // Close on outside click
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (modalContentRef.current && !modalContentRef.current.contains(event.target as Node)) {
+                onClose();
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [onClose]);
+
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+            <div ref={modalContentRef} className="bg-white rounded-lg shadow-xl w-full max-w-2xl flex flex-col">
+                <div className="flex justify-between items-center p-4 border-b">
+                    <h3 className="text-lg font-semibold">Bulk Add Employees</h3>
+                    <button onClick={onClose} className="text-gray-500 hover:text-gray-800 text-3xl font-bold leading-none">&times;</button>
+                </div>
+                <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                    <div>
+                        <label htmlFor="file-upload" className="block text-sm font-medium text-gray-700">
+                            Upload Excel or CSV File
+                        </label>
+                        <p className="text-xs text-gray-500 mb-2">
+                            Must contain columns: Employee ID, Name (AR), Name (EN), Hire Date (DD/MM/YYYY), Nationality, Job Title, Manager, Phone, Email, Employee Status, Section, Department
+                        </p>
+                        <input
+                            id="file-upload"
+                            type="file"
+                            accept=".xlsx, .csv"
+                            onChange={handleFileChange}
+                            className="mt-1 block w-full text-sm text-gray-500
+                                    file:mr-4 file:py-2 file:px-4
+                                    file:rounded-md file:border-0
+                                    file:text-sm file:font-semibold
+                                    file:bg-blue-50 file:text-blue-700
+                                    hover:file:bg-blue-100"
+                        />
+                    </div>
+
+                    {error && <div className="text-sm text-red-700 p-3 bg-red-100 rounded-md">{error}</div>}
+
+                    {uploadResult && (
+                        <div className={`text-sm p-3 rounded-md ${uploadResult.errors ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}`}>
+                            <p className="font-bold">{uploadResult.message}</p>
+                            {uploadResult.errors && (
+                                <ul className="list-disc list-inside mt-2 max-h-40 overflow-y-auto">
+                                    {uploadResult.errors.map((err, i) => (
+                                        <li key={i} className="text-xs">{err}</li>
+                                    ))}
+                                </ul>
+                            )}
+                        </div>
+                    )}
+
+                    <div className="flex justify-end gap-3 pt-4">
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-md hover:bg-gray-300"
+                        >
+                            Close
+                        </button>
+                        <button
+                            type="submit"
+                            disabled={isLoading || !file}
+                            className="bg-blue-600 text-white font-bold py-2 px-4 rounded-md hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed"
+                        >
+                            {isLoading ? 'Uploading...' : 'Upload and Process'}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+};
 
 // --- Employee Form Component ---
 const EmployeeForm = ({ employeeToEditId, onBack, onFormSubmit, user }: { employeeToEditId?: number | null; onBack: () => void; onFormSubmit: () => void; user: User | null; }) => {
@@ -279,6 +434,7 @@ const EmployeeForm = ({ employeeToEditId, onBack, onFormSubmit, user }: { employ
 
     const expiryDocTypeIds = useMemo(() => new Set(docTypes.types_with_expiry.map(t => t.system_id)), [docTypes.types_with_expiry]);
     const warrantDecisionDocTypeId = useMemo(() => docTypes.all_types.find(dt => dt.name.includes('Warrant Decisions') || dt.name.includes('القرارات الخاصة بالضبطية'))?.system_id, [docTypes]);
+    const judicialCardDocTypeId = useMemo(() => docTypes.all_types.find(dt => dt.name.includes('Judicial Card') || dt.name.includes('بطاقة الضبطية'))?.system_id, [docTypes]);
 
     useEffect(() => {
         fetch(`${basePath}/api/statuses`).then(res => res.json()).then(setStatuses);
@@ -297,38 +453,32 @@ const EmployeeForm = ({ employeeToEditId, onBack, onFormSubmit, user }: { employ
                 });
         }
     }, [employeeToEditId]);
-    
+
     useEffect(() => {
-        if (isFormLocked || !warrantDecisionDocTypeId || statuses.employee_status.length === 0) return;
-    
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-    
-        const allWarrantDocs = [
-            ...existingDocuments.filter(doc => doc.doc_type_id === 3),
-            ...newDocuments.filter(doc => doc.doc_type_id === '3')
+        if (isFormLocked || !judicialCardDocTypeId || statuses.employee_status.length === 0) return;
+
+        const allJudicialCardDocs = [
+            ...existingDocuments.filter(doc => doc.doc_type_id === judicialCardDocTypeId),
+            ...newDocuments.filter(doc => doc.doc_type_id === judicialCardDocTypeId.toString())
         ];
-    
-        const hasValidWarrant = allWarrantDocs.some(doc => {
-            const expiryDate = doc.expiry ? new Date(doc.expiry) : null;
-            return expiryDate && expiryDate >= today;
-        });
-    
+
+        const hasJudicialCard = allJudicialCardDocs.length > 0;
+
         const activeStatus = statuses.employee_status.find(s => s.name_english === 'Active');
         const inactiveStatus = statuses.employee_status.find(s => s.name_english === 'Inactive');
-    
-        if (hasValidWarrant && activeStatus) {
+
+        if (hasJudicialCard && activeStatus) {
             setFormData(prev => ({ ...prev, status_id: activeStatus.system_id.toString() }));
-        } else if (inactiveStatus) {
+        } else if (!hasJudicialCard && inactiveStatus) {
+            // If no card, set to Inactive
             setFormData(prev => ({ ...prev, status_id: inactiveStatus.system_id.toString() }));
         }
-    
-    }, [existingDocuments, newDocuments, warrantDecisionDocTypeId, statuses, isFormLocked]);
-    
+
+    }, [existingDocuments, newDocuments, judicialCardDocTypeId, statuses, isFormLocked]);
 
     const handleEmployeeSelect = async (employeeId: string) => {
         if (!employeeId) { setIsFormLocked(true); return; }
-        const res = await fetch(`${basePath}/api/hr_employees/${employeeId}`); // Add basePath
+        const res = await fetch(`${basePath}/api/hr_employees/${employeeId}`);
         const details: HrEmployeeDetails = await res.json();
         setFormData({ employee_id: details.system_id, name_en: details.fullname_en || '', name_ar: details.fullname_ar || '', employeeNumber: details.empno || '', jobTitle: details.job_name || '', department: details.department || '', section: details.section || '', email: details.email || '', phone: details.mobile || '', manager: details.supervisorname || '', nationality: details.nationality || '', hireDate: '', status_id: '' });
         setIsFormLocked(false);
@@ -338,12 +488,12 @@ const EmployeeForm = ({ employeeToEditId, onBack, onFormSubmit, user }: { employ
     const handleNationalityChange = (value: string) => setFormData(prev => ({ ...prev, nationality: value }));
 
     const addNewDocumentRow = () => setNewDocuments(prev => [...prev, { doc_type_id: '', doc_type_name: '', file: null, expiry: '', legislation_ids: [] }]);
-    
+
     const handleNewDocumentChange = (index: number, field: keyof NewDocument, value: any) => {
         setError('');
         const newDocs = [...newDocuments];
         const doc = newDocs[index];
-    
+
         if (field === 'file' && value instanceof File) {
             const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf'];
             if (!allowedTypes.includes(value.type)) {
@@ -385,7 +535,7 @@ const EmployeeForm = ({ employeeToEditId, onBack, onFormSubmit, user }: { employ
                 if (expiryDocTypeIds.has(parseInt(doc.doc_type_id, 10)) && !doc.expiry) { setError(`Expiry date is required for document type "${docType?.name}".`); return; }
             }
         }
-        
+
         setIsSubmitting(true);
         const submissionData = new FormData();
         submissionData.append('employee_data', JSON.stringify(formData));
@@ -412,18 +562,19 @@ const EmployeeForm = ({ employeeToEditId, onBack, onFormSubmit, user }: { employ
         setIsSubmitting(false);
     };
 
+
     const usedDocTypeIds = useMemo(() => {
         const otherDocTypeName = 'other'; // Define the name for "Other" type
         const allNewDocTypes = newDocuments.map(doc => doc.doc_type_name).filter(Boolean);
         const usedNonOtherTypes = new Set<number>();
-    
+
         // Add existing doc types
         existingDocuments.forEach(doc => {
             if (!doc.doc_name.toLowerCase().includes(otherDocTypeName)) {
                 usedNonOtherTypes.add(doc.doc_type_id);
             }
         });
-    
+
         // Add new doc types
         newDocuments.forEach(doc => {
             const docTypeId = parseInt(doc.doc_type_id, 10);
@@ -431,10 +582,10 @@ const EmployeeForm = ({ employeeToEditId, onBack, onFormSubmit, user }: { employ
                 usedNonOtherTypes.add(docTypeId);
             }
         });
-    
+
         return usedNonOtherTypes;
     }, [existingDocuments, newDocuments]);
-    
+
     const inputClassName = "mt-1 p-2 w-full border rounded-md read-only:bg-gray-100 read-only:cursor-not-allowed";
     const selectClassName = "mt-1 p-2 w-full border rounded-md disabled:bg-gray-100 disabled:cursor-not-allowed disabled:appearance-none";
     const checkboxClassName = "rounded disabled:cursor-not-allowed";
@@ -460,9 +611,9 @@ const EmployeeForm = ({ employeeToEditId, onBack, onFormSubmit, user }: { employ
                                 <div><label className="block text-sm">الوظيفة / Job Title:</label><input type="text" name="jobTitle" value={formData.jobTitle || ''} onChange={handleInputChange} readOnly={isViewer} className={inputClassName} /></div>
                                 <div>
                                     <label className="block text-sm">الجنسية / Nationality:</label>
-                                    <SearchableNationalitySelect 
-                                        value={formData.nationality || ''} 
-                                        onChange={handleNationalityChange} 
+                                    <SearchableNationalitySelect
+                                        value={formData.nationality || ''}
+                                        onChange={handleNationalityChange}
                                         disabled={isViewer || isFormLocked}
                                         nationalities={nationalities}
                                     />
@@ -479,83 +630,83 @@ const EmployeeForm = ({ employeeToEditId, onBack, onFormSubmit, user }: { employ
                     <fieldset disabled={isFormLocked}>
                         <div>
                             <h3 className="text-lg font-semibold mb-4 text-blue-700">ثانياً: المستندات / Second: Documents</h3>
-                            {employeeToEditId && existingDocuments.length > 0 && ( 
-                                <div className="space-y-2 mb-4"> 
-                                    <h4 className="text-sm font-semibold">المستندات الحالية / Existing Documents:</h4> 
+                            {employeeToEditId && existingDocuments.length > 0 && (
+                                <div className="space-y-2 mb-4">
+                                    <h4 className="text-sm font-semibold">المستندات الحالية / Existing Documents:</h4>
                                     {existingDocuments.map(doc => {
                                         const isWarrantDecision = warrantDecisionDocTypeId && doc.doc_type_id === warrantDecisionDocTypeId;
                                         return (
-                                            <div key={doc.system_id} className="p-3 border rounded-md bg-gray-50 text-sm"> 
-                                                <div className="flex justify-between items-center"> 
-                                                    <span className="font-semibold">{doc.doc_name}</span> 
-                                                    <div className="flex items-center gap-4"> 
+                                            <div key={doc.system_id} className="p-3 border rounded-md bg-gray-50 text-sm">
+                                                <div className="flex justify-between items-center">
+                                                    <span className="font-semibold">{doc.doc_name}</span>
+                                                    <div className="flex items-center gap-4">
                                                         {doc.expiry && (<span className="text-xs text-gray-600 bg-gray-200 px-2 py-1 rounded">تنتهي / expires: {doc.expiry}</span>)}
                                                         <button type="button" title="View Document" onClick={() => setViewingDoc({ url: `${doc.docnumber}`, name: doc.doc_name })} className="text-gray-500 hover:text-gray-800"><img src={`${basePath}/eye-icon.svg`} alt="View" className="h-5 w-5" /></button>
-                                                        {!isViewer && (<button type="button" title="Remove Document" onClick={() => handleDeleteExistingDoc(doc.system_id)} className="text-red-500/75 hover:text-red-700"><img src={`${basePath}/trash-icon.svg`} alt="Remove" className="h-5 w-5" /></button> )}
-                                                    </div> 
-                                                </div> 
+                                                        {!isViewer && (<button type="button" title="Remove Document" onClick={() => handleDeleteExistingDoc(doc.system_id)} className="text-red-500/75 hover:text-red-700"><img src={`${basePath}/trash-icon.svg`} alt="Remove" className="h-5 w-5" /></button>)}
+                                                    </div>
+                                                </div>
                                                 {isWarrantDecision && (
                                                     <div className="mt-2">
                                                         <label className="text-xs font-semibold text-gray-700">التشريع المرتبط / Related Legislation</label>
                                                         <div className="mt-1 p-2 border rounded-md bg-white max-h-32 overflow-y-auto space-y-1">
                                                             {legislations.map(leg => (
                                                                 <label key={leg.system_id} className="flex items-center space-x-2 rtl:space-x-reverse cursor-pointer">
-                                                                    <input type="checkbox" checked={doc.legislation_ids.includes(leg.system_id)} onChange={() => handleExistingDocLegislationChange(doc.system_id, leg.system_id)} className={checkboxClassName} disabled={isViewer}/>
+                                                                    <input type="checkbox" checked={doc.legislation_ids.includes(leg.system_id)} onChange={() => handleExistingDocLegislationChange(doc.system_id, leg.system_id)} className={checkboxClassName} disabled={isViewer} />
                                                                     <span className="text-sm">{leg.name}</span>
                                                                 </label>
                                                             ))}
                                                         </div>
                                                     </div>
                                                 )}
-                                            </div> 
+                                            </div>
                                         );
-                                    })} 
-                                </div> 
+                                    })}
+                                </div>
                             )}
                             {!isViewer && (
-                            <div className="space-y-4">
-                                {newDocuments.map((doc, index) => {
-                                    const showExpiry = expiryDocTypeIds.has(parseInt(doc.doc_type_id, 10));
-                                    const isWarrantDecision = warrantDecisionDocTypeId && doc.doc_type_id === warrantDecisionDocTypeId.toString();
-                                    return (
-                                        <div key={index} className="flex items-start justify-between p-3 border rounded-md bg-gray-50 space-x-4 rtl:space-x-reverse">
-                                            <div className="flex-grow space-y-3">
-                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
-                                                    <div>
-                                                        <label className="text-xs">نوع المستند / Document Type</label>
-                                                        <select value={doc.doc_type_id} onChange={e => handleNewDocumentChange(index, 'doc_type_id', e.target.value)} className="p-2 w-full border rounded-md" required>
-                                                            <option value="">-- اختر / Select --</option>
-                                                            {docTypes.all_types.map(type => 
-                                                                <option 
-                                                                    key={type.system_id} 
-                                                                    value={type.system_id} 
-                                                                    disabled={
-                                                                        usedDocTypeIds.has(type.system_id) && 
-                                                                        type.system_id.toString() !== doc.doc_type_id
-                                                                    }
-                                                                >
-                                                                    {type.name}
-                                                                </option>
-                                                            )}
-                                                        </select>
-                                                    </div>
-                                                    <div><label className="text-xs">الملف / File</label><input id={`new-file-input-${index}`} type="file" onChange={e => handleNewDocumentChange(index, 'file', e.target.files ? e.target.files[0] : null)} className="p-1 w-full border rounded-md text-sm bg-white" accept="image/jpeg,image/png,application/pdf" required /></div>
-                                                    <div>{showExpiry && (<><label className="text-xs">تاريخ الانتهاء / Expiry Date</label><input type="date" value={doc.expiry} onChange={e => handleNewDocumentChange(index, 'expiry', e.target.value)} className="p-2 w-full border rounded-md" required /></>)}</div>
-                                                </div>
-                                                {isWarrantDecision && (
-                                                    <div className="mt-2">
-                                                        <label className="text-xs font-semibold text-gray-700">التشريع المرتبط / Related Legislation</label>
-                                                        <div className="mt-1 p-2 border rounded-md bg-white max-h-32 overflow-y-auto space-y-1">
-                                                        {legislations.map(leg => (<label key={leg.system_id} className="flex items-center space-x-2 rtl:space-x-reverse cursor-pointer"><input type="checkbox" checked={doc.legislation_ids.includes(leg.system_id.toString())} onChange={() => handleNewDocumentChange(index, 'legislation_ids', leg.system_id.toString())} className="rounded"/><span className="text-sm">{leg.name}</span></label>))}
+                                <div className="space-y-4">
+                                    {newDocuments.map((doc, index) => {
+                                        const showExpiry = expiryDocTypeIds.has(parseInt(doc.doc_type_id, 10));
+                                        const isWarrantDecision = warrantDecisionDocTypeId && doc.doc_type_id === warrantDecisionDocTypeId.toString();
+                                        return (
+                                            <div key={index} className="flex items-start justify-between p-3 border rounded-md bg-gray-50 space-x-4 rtl:space-x-reverse">
+                                                <div className="flex-grow space-y-3">
+                                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+                                                        <div>
+                                                            <label className="text-xs">نوع المستند / Document Type</label>
+                                                            <select value={doc.doc_type_id} onChange={e => handleNewDocumentChange(index, 'doc_type_id', e.target.value)} className="p-2 w-full border rounded-md" required>
+                                                                <option value="">-- اختر / Select --</option>
+                                                                {docTypes.all_types.map(type =>
+                                                                    <option
+                                                                        key={type.system_id}
+                                                                        value={type.system_id}
+                                                                        disabled={
+                                                                            usedDocTypeIds.has(type.system_id) &&
+                                                                            type.system_id.toString() !== doc.doc_type_id
+                                                                        }
+                                                                    >
+                                                                        {type.name}
+                                                                    </option>
+                                                                )}
+                                                            </select>
                                                         </div>
+                                                        <div><label className="text-xs">الملف / File</label><input id={`new-file-input-${index}`} type="file" onChange={e => handleNewDocumentChange(index, 'file', e.target.files ? e.target.files[0] : null)} className="p-1 w-full border rounded-md text-sm bg-white" accept="image/jpeg,image/png,application/pdf" required /></div>
+                                                        <div>{showExpiry && (<><label className="text-xs">تاريخ الانتهاء / Expiry Date</label><input type="date" value={doc.expiry} onChange={e => handleNewDocumentChange(index, 'expiry', e.target.value)} className="p-2 w-full border rounded-md" required /></>)}</div>
                                                     </div>
-                                                )}
+                                                    {isWarrantDecision && (
+                                                        <div className="mt-2">
+                                                            <label className="text-xs font-semibold text-gray-700">التشريع المرتبط / Related Legislation</label>
+                                                            <div className="mt-1 p-2 border rounded-md bg-white max-h-32 overflow-y-auto space-y-1">
+                                                                {legislations.map(leg => (<label key={leg.system_id} className="flex items-center space-x-2 rtl:space-x-reverse cursor-pointer"><input type="checkbox" checked={doc.legislation_ids.includes(leg.system_id.toString())} onChange={() => handleNewDocumentChange(index, 'legislation_ids', leg.system_id.toString())} className="rounded" /><span className="text-sm">{leg.name}</span></label>))}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <button type="button" onClick={() => removeNewDocumentRow(index)} className="text-gray-400 hover:text-red-600 font-bold text-2xl mt-5" title="Remove this document">&times;</button>
                                             </div>
-                                            <button type="button" onClick={() => removeNewDocumentRow(index)} className="text-gray-400 hover:text-red-600 font-bold text-2xl mt-5" title="Remove this document">&times;</button>
-                                        </div>
-                                    );
-                                })}
-                            </div>
+                                        );
+                                    })}
+                                </div>
                             )}
                             {!isViewer && (<div className="mt-4"><button type="button" onClick={addNewDocumentRow} className="bg-green-500 text-white font-bold py-2 px-4 rounded-md hover:bg-green-600 disabled:bg-green-300 disabled:cursor-not-allowed" disabled={isFormLocked}>+ إضافة مستند جديد / Add New Document</button></div>)}
                         </div>
@@ -573,18 +724,19 @@ export default function DashboardPage() {
     const [view, setView] = useState<'dashboard' | 'form'>('dashboard');
     const [user, setUser] = useState<User | null>(null);
     const [editingEmployeeId, setEditingEmployeeId] = useState<number | null>(null);
+    const [isBulkAddOpen, setIsBulkAddOpen] = useState(false);
     const router = useRouter();
     const [dataRefreshKey, setDataRefreshKey] = useState(0);
 
     useEffect(() => {
-        fetch(`${basePath}/api/auth/user`) // Add basePath
+        fetch(`${basePath}/api/auth/pta-user`)
             .then(res => res.ok ? res.json() : Promise.reject())
             .then(data => data.user?.username ? setUser(data.user) : router.push('/login'))
             .catch(() => router.push('/login'));
     }, [router]);
 
     const handleFormSubmit = () => setDataRefreshKey(k => k + 1);
-    const handleLogout = async () => { await fetch(`${basePath}/api/auth/logout`, { method: 'POST' }); router.push('/login'); }; // Add basePath
+    const handleLogout = async () => { await fetch(`${basePath}/api/auth/logout`, { method: 'POST' }); router.push('/login'); };
     const handleEdit = (employee: ArchivedEmployee) => { if (employee.system_id) { setEditingEmployeeId(employee.system_id); setView('form'); } };
     const handleBackFromForm = () => { setEditingEmployeeId(null); setView('dashboard'); };
 
@@ -604,22 +756,23 @@ export default function DashboardPage() {
                     <h1 className="text-2xl font-bold text-gray-900">نظام متابعة الضبطية القضائية / Judicial control monitoring system</h1>
                     <div className="flex items-center gap-4">
                         <div className="text-sm flex items-center gap-2">
-                           <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${securityLevelClasses}`}>{user.security_level}</span>
-                           <span className="font-semibold">{user.username}</span>
+                            <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${securityLevelClasses}`}>{user.security_level}</span>
+                            <span className="font-semibold">{user.username}</span>
                         </div>
                         <button onClick={handleLogout} className="bg-red-500 text-white text-xs font-bold py-1 px-3 rounded-md hover:bg-red-600">تسجيل الخروج / Logout</button>
                     </div>
                 </div>
             </header>
             <main className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                {view === 'dashboard' ? (<DashboardView user={user} onAddNew={() => setView('form')} onEdit={handleEdit} dataRefreshKey={dataRefreshKey} />) : (<EmployeeForm user={user} onBack={handleBackFromForm} onFormSubmit={handleFormSubmit} employeeToEditId={editingEmployeeId} />)}
+                {view === 'dashboard' ? (<DashboardView user={user} onAddNew={() => setView('form')} onBulkAdd={() => setIsBulkAddOpen(true)} onEdit={handleEdit} dataRefreshKey={dataRefreshKey} />) : (<EmployeeForm user={user} onBack={handleBackFromForm} onFormSubmit={handleFormSubmit} employeeToEditId={editingEmployeeId} />)}
+                {isBulkAddOpen && <BulkAddModal onClose={() => setIsBulkAddOpen(false)} onUploadSuccess={handleFormSubmit} />}
             </main>
         </div>
     );
 }
 
 // --- Dashboard View Component ---
-const DashboardView = ({ onAddNew, onEdit, dataRefreshKey, user }: { onAddNew: () => void; onEdit: (emp: ArchivedEmployee) => void; dataRefreshKey: number; user: User | null; }) => {
+const DashboardView = ({ onAddNew, onBulkAdd, onEdit, dataRefreshKey, user }: { onAddNew: () => void; onBulkAdd: () => void; onEdit: (emp: ArchivedEmployee) => void; dataRefreshKey: number; user: User | null; }) => {
     const [employees, setEmployees] = useState<ArchivedEmployee[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [dashboardCounts, setDashboardCounts] = useState({ total_employees: 0, active_employees: 0, inactive_employees: 0, expiring_soon: 0 });
@@ -661,7 +814,16 @@ const DashboardView = ({ onAddNew, onEdit, dataRefreshKey, user }: { onAddNew: (
         <div className="bg-white p-6 rounded-lg shadow">
             <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
                 <h2 className="text-xl font-bold">لوحة المعلومات / Dashboard</h2>
-                {!isViewer && (<button onClick={onAddNew} className="w-full md:w-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-md hover:bg-blue-700">+ إضافة موظف جديد / Add New Employee</button>)}
+                {!isViewer && (
+                    <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+                        <button onClick={onBulkAdd} className="w-full sm:w-auto bg-green-600 text-white font-bold py-2 px-4 rounded-md hover:bg-green-700">
+                            + إضافة دفعة / Bulk Add
+                        </button>
+                        <button onClick={onAddNew} className="w-full sm:w-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-md hover:bg-blue-700">
+                            + إضافة موظف جديد / Add New Employee
+                        </button>
+                    </div>
+                )}
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
                 <div onClick={() => handleCardClick(null, null, 'total')} className={`${cardBaseClasses} bg-blue-50 hover:bg-blue-100 ${activeCard === 'total' ? activeCardClasses : ''}`}>
