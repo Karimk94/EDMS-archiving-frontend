@@ -807,13 +807,26 @@ const DashboardView = ({ onAddNew, onBulkAdd, onEdit, dataRefreshKey, user }: { 
         setActiveCard(cardName);
     }
 
+    const handleExport = () => {
+        const params = new URLSearchParams();
+        if (searchTerm) params.append('search', searchTerm);
+        if (statusFilter) params.append('status', statusFilter);
+        if (filterType) params.append('filter_type', filterType);
+
+        const exportUrl = `${basePath}/api/employees/export?${params.toString()}`;
+
+        window.open(exportUrl, '_blank');
+    };
+
     const cardBaseClasses = "p-4 rounded-lg text-center border cursor-pointer hover:bg-opacity-80 transition";
     const activeCardClasses = "ring-2 ring-blue-500 ring-offset-2";
 
     return (
         <div className="bg-white p-6 rounded-lg shadow">
             <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
-                <h2 className="text-xl font-bold">لوحة المعلومات / Dashboard</h2>
+                <div className="flex items-center gap-4">
+                    <h2 className="text-xl font-bold">لوحة المعلومات / Dashboard</h2>
+                </div>
                 {!isViewer && (
                     <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
                         <button onClick={onBulkAdd} className="w-full sm:w-auto bg-green-600 text-white font-bold py-2 px-4 rounded-md hover:bg-green-700">
@@ -843,9 +856,18 @@ const DashboardView = ({ onAddNew, onBulkAdd, onEdit, dataRefreshKey, user }: { 
                     <h3 className="text-3xl font-bold text-yellow-900 mt-2">{dashboardCounts.expiring_soon}</h3>
                 </div>
             </div>
+            <div className="flex justify-end mb-4">
+                <button
+                    onClick={handleExport}
+                    className="bg-gray-600 text-white font-bold py-2 px-4 rounded-md hover:bg-gray-700"
+                >
+                    تصدير / Export
+                </button>
+            </div>
             <div className="mb-6"><input type="text" placeholder="ابحث بالاسم، الرقم الوظيفي... / Search by Name, Employee No..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full p-2 border rounded-md" /></div>
+
             <div className="overflow-x-auto">
-                <table className="w-full table-fixed border-collapse">
+                <table className="w-full border-collapse">
                     <thead className="bg-gray-100 border-b-2 border-gray-200">
                         <tr>
                             <th className="p-3 w-16 font-bold text-sm text-right">م / #</th>
